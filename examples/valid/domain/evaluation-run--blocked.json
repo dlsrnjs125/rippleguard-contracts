@@ -1,4 +1,5 @@
 {
+  "schemaVersion": "1.0.0",
   "evaluationRunId": "30000000-0000-4000-8000-000000000003",
   "decisionCaseId": "case-1001",
   "inputSnapshotVersion": "snapshot-blocked-v1",
@@ -6,12 +7,14 @@
   "componentVersions": [
     { "componentType": "MODEL", "componentName": "loan-decision-model", "version": "mock-v1" },
     { "componentType": "PROMPT", "componentName": "loan-decision-prompt", "version": "mock-prompt-v1" },
-    { "componentType": "TOOL", "componentName": "phase1-tooling", "version": "phase1-no-tools" },
-    { "componentType": "AGENT", "componentName": "mock-evaluator", "version": "mock-evaluator-v1" }
+    { "componentType": "TOOL", "componentName": "governor-policy-tool", "version": "phase1-mock-v1" },
+    { "componentType": "TOOL", "componentName": "document-parser", "version": "phase1-mock-v1" },
+    { "componentType": "AGENT", "componentName": "loan-decision-agent", "version": "mock-v1" },
+    { "componentType": "AGENT", "componentName": "evidence-control-agent", "version": "mock-v1" }
   ],
   "policyInputVersion": "phase1-no-opa-input",
   "policyBundleVersion": "phase1-no-opa",
   "status": "BLOCKED",
   "supersedesRunId": null,
-  "createdAt": "2026-01-15T09:06:00+09:00"
+  "createdAt": "2026-01-15T09:00:30+09:00"
 }

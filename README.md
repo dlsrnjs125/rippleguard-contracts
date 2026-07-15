@@ -6,9 +6,9 @@ RippleGuard 서비스와 Agent 사이의 실행 가능한 JSON Schema 계약 원
 
 - `schemas/common`: 공통 Event Envelope
 - `schemas/events`: Full SemVer 파일로 분리된 Phase 1 비동기 Event
-- `schemas/external-risk-signal`: FDS 위험신호 입력
-- `schemas/domain`: 상태와 Evaluation Run
-- `schemas/agent-output`: Decision Envelope와 최소 Assurance 결과
+- `schemas/external-risk-signal`: Full SemVer FDS 위험신호 입력
+- `schemas/domain`: 상태와 Full SemVer Evaluation Run
+- `schemas/agent-output`: Full SemVer Decision Envelope와 최소 Assurance 결과
 - `examples/valid`, `examples/invalid`: 성공·실패 검증 fixture
 - `docs`: 범위와 버전·호환성 정책
 

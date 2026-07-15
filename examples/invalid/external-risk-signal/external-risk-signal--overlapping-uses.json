@@ -1,3 +1,4 @@
 {
+  "schemaVersion": "1.0.0",
   "riskSignalId": "60000000-0000-4000-8000-000000000011", "sourceSystem": "fds-simulator", "originalPurpose": "FRAUD_DETECTION", "subjectType": "CUSTOMER", "subjectId": "customer-42", "inferenceStatus": "CONFIRMED", "confidence": 1, "occurredAt": "2026-01-15T08:50:00+09:00", "validUntil": "2026-01-16T08:50:00+09:00", "permittedUses": ["CUSTOMER_CREDIT_RISK_ASSESSMENT"], "prohibitedUses": ["CUSTOMER_CREDIT_RISK_ASSESSMENT"], "reasonCodes": ["IDENTITY_MISMATCH_CONFIRMED"]
 }

@@ -1,10 +1,11 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.rippleguard.dev/external-risk-signal/external-risk-signal.schema.json",
+  "$id": "https://schemas.rippleguard.dev/external-risk-signal/external-risk-signal.v1.0.0.schema.json",
   "title": "External Risk Signal",
   "description": "Purpose-bound signal supplied by an FDS Simulator. A suspected transaction anomaly is not a confirmed fact about the customer and must not be promoted into customer credit risk.",
   "type": "object",
   "properties": {
+    "schemaVersion": { "const": "1.0.0" },
     "riskSignalId": { "type": "string", "format": "uuid" },
     "sourceSystem": { "type": "string", "minLength": 1 },
     "originalPurpose": { "type": "string", "enum": ["FRAUD_DETECTION"] },
@@ -18,7 +19,7 @@
     "prohibitedUses": { "type": "array", "items": { "type": "string", "enum": ["AUTOMATIC_LOAN_REJECTION", "CUSTOMER_CREDIT_RISK_ASSESSMENT", "CUSTOMER_RISK_CLASSIFICATION"] }, "minItems": 1, "uniqueItems": true },
     "reasonCodes": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1, "uniqueItems": true }
   },
-  "required": ["riskSignalId", "sourceSystem", "originalPurpose", "subjectType", "subjectId", "inferenceStatus", "confidence", "occurredAt", "validUntil", "permittedUses", "prohibitedUses", "reasonCodes"],
+  "required": ["schemaVersion", "riskSignalId", "sourceSystem", "originalPurpose", "subjectType", "subjectId", "inferenceStatus", "confidence", "occurredAt", "validUntil", "permittedUses", "prohibitedUses", "reasonCodes"],
   "allOf": [
     {
       "if": { "properties": { "inferenceStatus": { "const": "SUSPECTED" } }, "required": ["inferenceStatus"] },
