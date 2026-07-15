@@ -1,0 +1,3 @@
+{
+  "evaluationRunId": "30000000-0000-4000-8000-000000000002", "decisionCaseId": "case-1001", "inputSnapshotVersion": "snapshot-v3", "executionPlanVersion": "phase1-mock-v1", "status": "CREATED", "supersedesRunId": null, "createdAt": "2026-01-15T09:10:00+09:00"
+}

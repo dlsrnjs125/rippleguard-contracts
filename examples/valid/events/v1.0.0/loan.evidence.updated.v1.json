@@ -7,5 +7,5 @@
   "caseId": "case-1001",
   "correlationId": "loan-1001",
   "causationId": "10000000-0000-4000-8000-000000000003",
-  "payload": { "applicationId": "loan-1001", "inputSnapshotVersion": "snapshot-v2", "evidenceRefs": ["evidence://transaction-explanation/1"] }
+  "payload": { "applicationId": "loan-1001", "decisionCaseId": "case-1001", "inputSnapshotVersion": "snapshot-v2", "evidenceRefs": ["evidence://transaction-explanation/1"] }
 }

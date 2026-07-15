@@ -9,10 +9,34 @@
     "decisionCaseId": { "type": "string", "minLength": 1 },
     "inputSnapshotVersion": { "type": "string", "minLength": 1 },
     "executionPlanVersion": { "type": "string", "minLength": 1 },
+    "componentVersions": {
+      "type": "array",
+      "description": "Complete model, prompt, tool, and agent provenance used by this immutable run. Phase 1 mock or unused components still have explicit versions.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "componentType": { "type": "string", "enum": ["MODEL", "PROMPT", "TOOL", "AGENT"] },
+          "componentName": { "type": "string", "minLength": 1 },
+          "version": { "type": "string", "minLength": 1 }
+        },
+        "required": ["componentType", "componentName", "version"],
+        "additionalProperties": false
+      },
+      "minItems": 4,
+      "uniqueItems": true,
+      "allOf": [
+        { "contains": { "properties": { "componentType": { "const": "MODEL" } }, "required": ["componentType"] }, "minContains": 1, "maxContains": 1 },
+        { "contains": { "properties": { "componentType": { "const": "PROMPT" } }, "required": ["componentType"] }, "minContains": 1, "maxContains": 1 },
+        { "contains": { "properties": { "componentType": { "const": "TOOL" } }, "required": ["componentType"] }, "minContains": 1, "maxContains": 1 },
+        { "contains": { "properties": { "componentType": { "const": "AGENT" } }, "required": ["componentType"] }, "minContains": 1, "maxContains": 1 }
+      ]
+    },
+    "policyInputVersion": { "type": "string", "minLength": 1, "description": "Explicit policy input version, including a Phase 1 no-OPA marker." },
+    "policyBundleVersion": { "type": "string", "minLength": 1, "description": "Explicit policy bundle version, such as phase1-no-opa." },
     "status": { "type": "string", "description": "CREATED has fixed inputs; RUNNING is executing; COMPLETED produced results; BLOCKED hit a hard block; FAILED had a technical or contract failure; CANCELLED stopped safely. Terminal runs are never reopened.", "enum": ["CREATED", "RUNNING", "COMPLETED", "BLOCKED", "FAILED", "CANCELLED"] },
     "supersedesRunId": { "type": ["string", "null"], "format": "uuid" },
     "createdAt": { "type": "string", "format": "date-time", "pattern": "T.*(?:Z|[+-][0-9]{2}:[0-9]{2})$" }
   },
-  "required": ["evaluationRunId", "decisionCaseId", "inputSnapshotVersion", "executionPlanVersion", "status", "supersedesRunId", "createdAt"],
+  "required": ["evaluationRunId", "decisionCaseId", "inputSnapshotVersion", "executionPlanVersion", "componentVersions", "policyInputVersion", "policyBundleVersion", "status", "supersedesRunId", "createdAt"],
   "additionalProperties": false
 }

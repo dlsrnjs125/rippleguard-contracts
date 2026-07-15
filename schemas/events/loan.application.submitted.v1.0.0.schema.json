@@ -1,13 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.rippleguard.dev/events/loan.application.submitted.v1.schema.json",
-  "title": "Loan Application Submitted v1",
+  "$id": "https://schemas.rippleguard.dev/events/loan.application.submitted.v1.0.0.schema.json",
+  "title": "Loan Application Submitted v1.0.0",
   "allOf": [
     { "$ref": "../common/event-envelope.schema.json" },
     {
       "properties": {
         "eventType": { "const": "loan.application.submitted.v1" },
         "schemaVersion": { "const": "1.0.0" },
+        "causationId": { "const": null, "description": "The root application event has no preceding event." },
         "payload": {
           "type": "object",
           "properties": {

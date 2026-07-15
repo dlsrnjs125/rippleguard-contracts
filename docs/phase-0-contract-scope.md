@@ -10,6 +10,8 @@
 - Minimal Phase 1 Assurance result
 - Local and CI contract validation
 
+Phase 1 final Decision Commands require a completed Evaluation Run and complete Assurance. Conditional approval remains a proposal only; executable conditional approval is deferred until condition references and agreement versioning are defined.
+
 ## Deferred
 
 Phase 0 does not establish final Consequence Envelope, Evidence & Control Findings, Assurance Profile, OPA Policy Input, REST/OpenAPI, Registry Server, or language-specific DTO contracts. Those contracts require later-phase evidence and policy decisions and must not be inferred from these minimum schemas.

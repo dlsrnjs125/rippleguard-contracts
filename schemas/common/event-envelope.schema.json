@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.rippleguard.dev/common/event-envelope.schema.json",
   "title": "RippleGuard Event Envelope",
-  "description": "Common immutable envelope for RippleGuard events. eventId supports idempotency, correlationId joins one loan application flow, and causationId identifies the immediately preceding event that caused this event.",
+  "description": "Common immutable envelope for RippleGuard events. eventId supports idempotency, correlationId joins one loan application flow, and causationId identifies the immediately preceding event; root events use null.",
   "type": "object",
   "properties": {
     "eventId": { "type": "string", "format": "uuid", "description": "Immutable event identifier used for duplicate detection." },
@@ -12,7 +12,7 @@
     "producer": { "type": "string", "minLength": 1 },
     "caseId": { "type": "string", "minLength": 1 },
     "correlationId": { "type": "string", "minLength": 1 },
-    "causationId": { "type": "string", "format": "uuid" },
+    "causationId": { "type": ["string", "null"], "format": "uuid", "description": "Previous event ID, or null only for a root event." },
     "payload": { "type": "object" }
   },
   "required": ["eventId", "eventType", "schemaVersion", "occurredAt", "producer", "caseId", "correlationId", "causationId", "payload"]

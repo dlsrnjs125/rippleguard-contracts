@@ -5,7 +5,7 @@ RippleGuard 서비스와 Agent 사이의 실행 가능한 JSON Schema 계약 원
 ## 구조
 
 - `schemas/common`: 공통 Event Envelope
-- `schemas/events`: Phase 1 비동기 Event
+- `schemas/events`: Full SemVer 파일로 분리된 Phase 1 비동기 Event
 - `schemas/external-risk-signal`: FDS 위험신호 입력
 - `schemas/domain`: 상태와 Evaluation Run
 - `schemas/agent-output`: Decision Envelope와 최소 Assurance 결과
@@ -21,7 +21,7 @@ python -m pip install -r requirements-dev.txt
 make validate
 ```
 
-검증 명령은 JSON 문법, Schema 자체, `$ref`, 중복 `$id`, valid fixture의 성공과 invalid fixture의 예상 실패를 확인합니다.
+검증 명령은 JSON 문법, Schema 자체, `$ref`, 중복 `$id`, cross-field 의미 제약, 같은 major 내 minor 호환성, valid fixture의 성공과 invalid fixture의 예상 실패를 확인합니다.
 
 ## 버전 원칙
 

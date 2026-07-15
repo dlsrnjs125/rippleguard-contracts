@@ -1,22 +1,26 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.rippleguard.dev/events/governance.evidence.requested.v1.schema.json",
-  "title": "Governance Evidence Requested v1",
+  "$id": "https://schemas.rippleguard.dev/events/governance.evidence.requested.v1.0.0.schema.json",
+  "title": "Governance Evidence Requested v1.0.0",
   "allOf": [
     { "$ref": "../common/event-envelope.schema.json" },
     {
       "properties": {
         "eventType": { "const": "governance.evidence.requested.v1" },
         "schemaVersion": { "const": "1.0.0" },
+        "causationId": { "type": "string", "format": "uuid" },
         "payload": {
           "type": "object",
           "properties": {
             "requestId": { "type": "string", "format": "uuid" },
             "decisionCaseId": { "type": "string", "minLength": 1 },
+            "evaluationRunId": { "type": "string", "format": "uuid" },
+            "inputSnapshotVersion": { "type": "string", "minLength": 1 },
+            "applicationId": { "type": "string", "minLength": 1 },
             "requestedEvidenceTypes": { "type": "array", "items": { "type": "string", "enum": ["IDENTITY_DOCUMENT", "INCOME_DOCUMENT", "TRANSACTION_EXPLANATION"] }, "minItems": 1, "uniqueItems": true },
             "reasonCodes": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1, "uniqueItems": true }
           },
-          "required": ["requestId", "decisionCaseId", "requestedEvidenceTypes", "reasonCodes"],
+          "required": ["requestId", "decisionCaseId", "evaluationRunId", "inputSnapshotVersion", "applicationId", "requestedEvidenceTypes", "reasonCodes"],
           "additionalProperties": false
         }
       }
