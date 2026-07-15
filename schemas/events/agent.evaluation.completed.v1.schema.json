@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.rippleguard.dev/events/agent.evaluation.completed.v1.schema.json",
+  "title": "Agent Evaluation Completed v1",
+  "description": "Implementation-neutral evaluation result. MOCK and AGENT producers return the same Decision Envelope.",
+  "allOf": [
+    { "$ref": "../common/event-envelope.schema.json" },
+    {
+      "properties": {
+        "eventType": { "const": "agent.evaluation.completed.v1" },
+        "schemaVersion": { "const": "1.0.0" },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "evaluationRunId": { "type": "string", "format": "uuid" },
+            "decisionCaseId": { "type": "string", "minLength": 1 },
+            "evaluationMode": { "type": "string", "enum": ["MOCK", "AGENT"] },
+            "decisionEnvelope": { "$ref": "../agent-output/decision-envelope.schema.json" }
+          },
+          "required": ["evaluationRunId", "decisionCaseId", "evaluationMode", "decisionEnvelope"],
+          "additionalProperties": false
+        }
+      }
+    }
+  ],
+  "unevaluatedProperties": false
+}

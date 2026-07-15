@@ -1,0 +1,16 @@
+{
+  "eventId": "10000000-0000-4000-8000-000000000006",
+  "eventType": "agent.evaluation.completed.v1",
+  "schemaVersion": "1.0.0",
+  "occurredAt": "2026-01-15T09:06:01+09:00",
+  "producer": "mock-evaluator",
+  "caseId": "case-1001",
+  "correlationId": "loan-1001",
+  "causationId": "10000000-0000-4000-8000-000000000005",
+  "payload": {
+    "evaluationRunId": "30000000-0000-4000-8000-000000000001",
+    "decisionCaseId": "case-1001",
+    "evaluationMode": "MOCK",
+    "decisionEnvelope": { "decisionId": "40000000-0000-4000-8000-000000000001", "evaluationRunId": "30000000-0000-4000-8000-000000000001", "decisionCaseId": "case-1001", "producer": "mock-evaluator", "originalPurpose": "LOAN_ELIGIBILITY_ASSESSMENT", "subjectType": "LOAN_APPLICATION", "proposal": "PROPOSE_APPROVE", "status": "PROPOSED", "confidence": 0.82, "usedEvidenceRefs": ["snapshot://loan-1001/v2"], "modelVersion": "mock-v1", "promptVersion": "mock-prompt-v1", "validUntil": "2026-01-16T09:06:01+09:00" }
+  }
+}

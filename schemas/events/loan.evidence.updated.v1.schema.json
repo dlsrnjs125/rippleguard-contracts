@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.rippleguard.dev/events/loan.evidence.updated.v1.schema.json",
+  "title": "Loan Evidence Updated v1",
+  "allOf": [
+    { "$ref": "../common/event-envelope.schema.json" },
+    {
+      "properties": {
+        "eventType": { "const": "loan.evidence.updated.v1" },
+        "schemaVersion": { "const": "1.0.0" },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "applicationId": { "type": "string", "minLength": 1 },
+            "inputSnapshotVersion": { "type": "string", "minLength": 1 },
+            "evidenceRefs": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1, "uniqueItems": true }
+          },
+          "required": ["applicationId", "inputSnapshotVersion", "evidenceRefs"],
+          "additionalProperties": false
+        }
+      }
+    }
+  ],
+  "unevaluatedProperties": false
+}

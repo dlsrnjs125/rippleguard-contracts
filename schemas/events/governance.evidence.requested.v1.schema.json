@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.rippleguard.dev/events/governance.evidence.requested.v1.schema.json",
+  "title": "Governance Evidence Requested v1",
+  "allOf": [
+    { "$ref": "../common/event-envelope.schema.json" },
+    {
+      "properties": {
+        "eventType": { "const": "governance.evidence.requested.v1" },
+        "schemaVersion": { "const": "1.0.0" },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "requestId": { "type": "string", "format": "uuid" },
+            "decisionCaseId": { "type": "string", "minLength": 1 },
+            "requestedEvidenceTypes": { "type": "array", "items": { "type": "string", "enum": ["IDENTITY_DOCUMENT", "INCOME_DOCUMENT", "TRANSACTION_EXPLANATION"] }, "minItems": 1, "uniqueItems": true },
+            "reasonCodes": { "type": "array", "items": { "type": "string", "minLength": 1 }, "minItems": 1, "uniqueItems": true }
+          },
+          "required": ["requestId", "decisionCaseId", "requestedEvidenceTypes", "reasonCodes"],
+          "additionalProperties": false
+        }
+      }
+    }
+  ],
+  "unevaluatedProperties": false
+}

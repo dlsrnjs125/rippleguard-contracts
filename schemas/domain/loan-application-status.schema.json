@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.rippleguard.dev/domain/loan-application-status.schema.json",
+  "title": "Loan Application Status",
+  "description": "Lifecycle state owned and changed only by Loan Service: DRAFT is being authored; SUBMITTED has a stored snapshot; UNDER_GOVERNANCE_REVIEW is under review; EVIDENCE_REQUIRED awaits evidence; DECISION_RECEIVED has a validated command; FINALIZED has applied the outcome; CLOSED ends processing.",
+  "type": "string",
+  "enum": ["DRAFT", "SUBMITTED", "UNDER_GOVERNANCE_REVIEW", "EVIDENCE_REQUIRED", "DECISION_RECEIVED", "FINALIZED", "CLOSED"]
+}

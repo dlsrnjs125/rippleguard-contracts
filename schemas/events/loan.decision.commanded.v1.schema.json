@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.rippleguard.dev/events/loan.decision.commanded.v1.schema.json",
+  "title": "Loan Decision Commanded v1",
+  "description": "Governance-approved command; unlike Decision Envelope, this instructs Loan Service to apply a final outcome idempotently.",
+  "allOf": [
+    { "$ref": "../common/event-envelope.schema.json" },
+    {
+      "properties": {
+        "eventType": { "const": "loan.decision.commanded.v1" },
+        "schemaVersion": { "const": "1.0.0" },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "commandId": { "type": "string", "format": "uuid" },
+            "decisionCaseId": { "type": "string", "minLength": 1 },
+            "applicationId": { "type": "string", "minLength": 1 },
+            "decisionId": { "type": "string", "format": "uuid" },
+            "finalDecision": { "type": "string", "enum": ["APPROVE", "CONDITIONAL_APPROVE", "REJECT"] },
+            "assuranceResult": { "$ref": "../agent-output/assurance-result.schema.json" }
+          },
+          "required": ["commandId", "decisionCaseId", "applicationId", "decisionId", "finalDecision", "assuranceResult"],
+          "additionalProperties": false
+        }
+      }
+    }
+  ],
+  "unevaluatedProperties": false
+}

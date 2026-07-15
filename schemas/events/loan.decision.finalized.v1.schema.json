@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.rippleguard.dev/events/loan.decision.finalized.v1.schema.json",
+  "title": "Loan Decision Finalized v1",
+  "allOf": [
+    { "$ref": "../common/event-envelope.schema.json" },
+    {
+      "properties": {
+        "eventType": { "const": "loan.decision.finalized.v1" },
+        "schemaVersion": { "const": "1.0.0" },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "commandId": { "type": "string", "format": "uuid" },
+            "decisionCaseId": { "type": "string", "minLength": 1 },
+            "applicationId": { "type": "string", "minLength": 1 },
+            "finalDecision": { "type": "string", "enum": ["APPROVE", "CONDITIONAL_APPROVE", "REJECT"] },
+            "finalizedAt": { "type": "string", "format": "date-time", "pattern": "T.*(?:Z|[+-][0-9]{2}:[0-9]{2})$" }
+          },
+          "required": ["commandId", "decisionCaseId", "applicationId", "finalDecision", "finalizedAt"],
+          "additionalProperties": false
+        }
+      }
+    }
+  ],
+  "unevaluatedProperties": false
+}
