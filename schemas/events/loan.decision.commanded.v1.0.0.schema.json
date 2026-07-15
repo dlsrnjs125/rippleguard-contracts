@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.rippleguard.dev/events/loan.decision.commanded.v1.0.0.schema.json",
+  "title": "Loan Decision Commanded v1.0.0",
+  "description": "Governance-approved command; unlike Decision Envelope, this instructs Loan Service to apply a final outcome idempotently.",
+  "allOf": [
+    { "$ref": "../common/event-envelope.schema.json" },
+    {
+      "properties": {
+        "producer": { "const": "governance-service" },
+        "eventType": { "const": "loan.decision.commanded.v1" },
+        "schemaVersion": { "const": "1.0.0" },
+        "causationId": { "type": "string", "format": "uuid" },
+        "payload": {
+          "type": "object",
+          "properties": {
+            "commandId": { "type": "string", "format": "uuid" },
+            "decisionCaseId": { "type": "string", "minLength": 1 },
+            "applicationId": { "type": "string", "minLength": 1 },
+            "decisionId": { "type": "string", "format": "uuid" },
+            "evaluationRunId": { "type": "string", "format": "uuid" },
+            "evaluationRunStatus": { "const": "COMPLETED", "description": "A BLOCKED, FAILED, CANCELLED, or still-running evaluation cannot produce a final command." },
+            "finalDecision": { "type": "string", "enum": ["APPROVE", "REJECT"], "description": "Phase 1 excludes conditional approval because no executable condition contract exists yet." },
+            "assuranceResult": { "const": "ASSURANCE_COMPLETE", "description": "Only complete Assurance may produce a Phase 1 final command." }
+          },
+          "required": ["commandId", "decisionCaseId", "applicationId", "decisionId", "evaluationRunId", "evaluationRunStatus", "finalDecision", "assuranceResult"],
+          "additionalProperties": false
+        }
+      }
+    }
+  ],
+  "unevaluatedProperties": false
+}

@@ -1,0 +1,8 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.rippleguard.dev/domain/decision-case-status.v1.0.0.schema.json",
+  "title": "Decision Case Status",
+  "description": "Governance workflow state owned and changed only by Governance Service: CREATED begins a case; PREFLIGHT_COMPLETED passed deterministic checks; EVALUATION_REQUESTED awaits evaluation; PROPOSAL_READY has a proposal; ASSURANCE_EVALUATED completed assurance; VERIFICATION_REQUIRED needs evidence; BLOCKED cannot proceed on this run; RECALCULATION_REQUIRED requires a new run; RESOLVED ends the governance path.",
+  "type": "string",
+  "enum": ["CREATED", "PREFLIGHT_COMPLETED", "EVALUATION_REQUESTED", "PROPOSAL_READY", "ASSURANCE_EVALUATED", "VERIFICATION_REQUIRED", "BLOCKED", "RECALCULATION_REQUIRED", "RESOLVED"]
+}

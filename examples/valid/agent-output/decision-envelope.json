@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0.0",
+  "decisionId": "40000000-0000-4000-8000-000000000002",
+  "evaluationRunId": "30000000-0000-4000-8000-000000000002",
+  "decisionCaseId": "case-1001",
+  "evaluatorId": "mock-evaluator",
+  "originalPurpose": "LOAN_ELIGIBILITY_ASSESSMENT",
+  "subjectType": "LOAN_APPLICATION",
+  "proposal": "PROPOSE_MORE_EVIDENCE",
+  "status": "PROPOSED",
+  "confidence": 0.65,
+  "usedEvidenceRefs": ["snapshot://loan-1001/v3"],
+  "generatorRef": { "agentName": "mock-evaluator", "agentVersion": "mock-evaluator-v1", "modelName": "loan-decision-model", "modelVersion": "mock-v1", "promptName": "loan-decision-prompt", "promptVersion": "mock-prompt-v1" },
+  "validUntil": "2026-01-16T09:10:00+09:00"
+}

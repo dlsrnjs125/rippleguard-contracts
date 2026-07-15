@@ -1,0 +1,3 @@
+{
+  "schemaVersion": "1.0.0", "evaluationRunId": "30000000-0000-4000-8000-000000000052", "decisionCaseId": "case-1001", "inputSnapshotVersion": "snapshot-v4", "executionPlanVersion": "phase1-mock-v1", "componentVersions": [{ "componentType": "MODEL", "componentName": "loan-model", "version": "mock-v1" }, { "componentType": "PROMPT", "componentName": "loan-prompt", "version": "mock-v1" }, { "componentType": "TOOL", "componentName": "phase1-tool", "version": "mock-v1" }, { "componentType": "AGENT", "componentName": "loan-agent", "version": "mock-v1" }], "policyInputVersion": "phase1-no-opa-input", "policyBundleVersion": "phase1-no-opa", "status": "CREATED", "supersedesRunId": "30000000-0000-4000-8000-000000000052", "createdAt": "2026-01-15T10:00:00+09:00"
+}

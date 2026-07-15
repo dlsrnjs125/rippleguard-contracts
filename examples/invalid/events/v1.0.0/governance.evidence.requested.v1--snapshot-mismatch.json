@@ -1,0 +1,4 @@
+{
+  "eventId": "10000000-0000-4000-8000-000000000069", "eventType": "governance.evidence.requested.v1", "schemaVersion": "1.0.0", "occurredAt": "2026-01-15T09:01:00+09:00", "producer": "governance-service", "caseId": "case-1001", "correlationId": "loan-1001", "causationId": "10000000-0000-4000-8000-000000000002",
+  "payload": { "requestId": "20000000-0000-4000-8000-000000000069", "decisionCaseId": "case-1001", "evaluationRunId": "30000000-0000-4000-8000-000000000003", "inputSnapshotVersion": "snapshot-wrong", "applicationId": "loan-1001", "requestedEvidenceTypes": ["TRANSACTION_EXPLANATION"], "reasonCodes": ["UNCONFIRMED_TRANSACTION_ANOMALY"] }
+}

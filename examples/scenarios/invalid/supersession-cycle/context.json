@@ -1,0 +1,12 @@
+{
+  "name": "supersession-cycle",
+  "expectedSemanticErrors": [
+    "EVALUATION_RUN_SUPERSESSION_CYCLE",
+    "EVALUATION_RUN_SUPERSEDES_TIME_INVALID",
+    "EVALUATION_RUN_SUPERSEDES_NON_TERMINAL"
+  ],
+  "fixtures": [
+    "examples/invalid/domain/evaluation-run--cycle-a.json",
+    "examples/invalid/domain/evaluation-run--cycle-b.json"
+  ]
+}

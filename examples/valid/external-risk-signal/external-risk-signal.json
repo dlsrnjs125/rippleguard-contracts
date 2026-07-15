@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0.0",
+  "riskSignalId": "60000000-0000-4000-8000-000000000001",
+  "sourceSystem": "fds-simulator",
+  "originalPurpose": "FRAUD_DETECTION",
+  "subjectType": "TRANSACTION",
+  "subjectId": "transaction-9001",
+  "inferenceStatus": "SUSPECTED",
+  "confidence": 0.76,
+  "occurredAt": "2026-01-15T08:55:00+09:00",
+  "validUntil": "2026-01-16T08:55:00+09:00",
+  "permittedUses": ["FRAUD_REVIEW", "MANUAL_REVIEW_ROUTING"],
+  "prohibitedUses": ["AUTOMATIC_LOAN_REJECTION", "CUSTOMER_CREDIT_RISK_ASSESSMENT", "CUSTOMER_RISK_CLASSIFICATION"],
+  "reasonCodes": ["UNUSUAL_TRANSFER_PATTERN"]
+}

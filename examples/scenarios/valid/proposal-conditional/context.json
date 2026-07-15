@@ -1,0 +1,7 @@
+{
+  "name": "proposal-conditional",
+  "fixtures": [
+    "examples/valid/domain/evaluation-run--completed.json",
+    "examples/valid/agent-output/decision-envelope--conditional.json"
+  ]
+}
