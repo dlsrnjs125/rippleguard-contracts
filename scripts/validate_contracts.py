@@ -108,11 +108,14 @@ def register_unique(index: dict[str, Any], key: Any, value: Any, code: str, fail
         index[key] = value
 
 
-def build_semantic_context(instances: list[Any]) -> tuple[dict[str, dict[str, Any]], list[str]]:
+def build_semantic_context(
+    instances: list[Any], causation_edges: set[tuple[str, str]] | None = None
+) -> tuple[dict[str, Any], list[str]]:
     failures: list[str] = []
-    context: dict[str, dict[str, Any]] = {
+    context: dict[str, Any] = {
         "events": {}, "decisions": {}, "commands": {}, "runs": {},
         "risk_signals": {}, "evidence_requests": {},
+        "causation_edges": causation_edges or set(),
     }
     for instance in instances:
         if not isinstance(instance, dict):
@@ -153,7 +156,7 @@ def decision_provenance_errors(decision: dict[str, Any], run: dict[str, Any]) ->
     return failures
 
 
-def semantic_errors(instance: Any, context: dict[str, dict[str, Any]] | None = None) -> list[str]:
+def semantic_errors(instance: Any, context: dict[str, Any] | None = None) -> list[str]:
     if not isinstance(instance, dict):
         return []
     failures: list[str] = []
@@ -214,17 +217,8 @@ def semantic_errors(instance: Any, context: dict[str, dict[str, Any]] | None = N
                     failures.append("CAUSATION_TIME_ORDER_INVALID")
             except (KeyError, TypeError, ValueError):
                 pass
-            allowed_causes = {
-                "governance.review.started.v1": {"loan.application.submitted.v1"},
-                "governance.evidence.requested.v1": {"governance.review.started.v1"},
-                "loan.evidence.updated.v1": {"governance.evidence.requested.v1"},
-                "agent.evaluation.requested.v1": {"loan.evidence.updated.v1"},
-                "agent.evaluation.completed.v1": {"agent.evaluation.requested.v1"},
-                "loan.decision.commanded.v1": {"agent.evaluation.completed.v1"},
-                "loan.decision.finalized.v1": {"loan.decision.commanded.v1"},
-            }
-            allowed = allowed_causes.get(event_type)
-            if allowed and cause.get("eventType") not in allowed:
+            edge = (cause.get("eventType"), event_type)
+            if edge not in context["causation_edges"]:
                 failures.append("CAUSATION_EVENT_TYPE_INVALID")
             cause_payload = cause.get("payload", {})
             if event_type == "agent.evaluation.completed.v1" and cause_payload.get("evaluationRunId") != payload.get("evaluationRunId"):
@@ -254,6 +248,8 @@ def semantic_errors(instance: Any, context: dict[str, dict[str, Any]] | None = N
         else:
             if run.get("decisionCaseId") != payload.get("decisionCaseId"):
                 failures.append("EVALUATION_COMPLETED_RUN_CASE_MISMATCH")
+            if run.get("status") != "COMPLETED":
+                failures.append("EVALUATION_COMPLETED_RUN_NOT_COMPLETED")
             failures.extend(decision_provenance_errors(decision, run))
 
     if event_type == "governance.evidence.requested.v1":
@@ -323,7 +319,7 @@ def semantic_errors(instance: Any, context: dict[str, dict[str, Any]] | None = N
     return failures
 
 
-def supersession_graph_errors(context: dict[str, dict[str, Any]]) -> list[str]:
+def supersession_graph_errors(context: dict[str, Any]) -> list[str]:
     graph = {key: run.get("supersedesRunId") for key, run in context["runs"].items() if run.get("supersedesRunId")}
     for start in graph:
         seen: set[str] = set()
@@ -369,16 +365,56 @@ def validate_schema_identity(path: Path, schema: dict[str, Any]) -> list[str]:
     return failures
 
 
-def load_scenarios(loaded: dict[Path, Any], failures: list[str]) -> tuple[dict[str, list[Any]], dict[Path, list[str]], dict[str, bool]]:
+def load_scenarios(
+    loaded: dict[Path, Any], failures: list[str]
+) -> tuple[dict[str, list[Any]], dict[Path, list[str]], dict[str, dict[str, Any]]]:
     scenarios: dict[str, list[Any]] = {}
     fixture_scenarios: dict[Path, list[str]] = {}
-    validation_enabled: dict[str, bool] = {}
+    scenario_specs: dict[str, dict[str, Any]] = {}
     for manifest_path in json_files(SCENARIOS):
         manifest = loaded.get(manifest_path)
-        name = manifest_path.parent.name
         if not isinstance(manifest, dict) or not isinstance(manifest.get("fixtures"), list):
             failures.append(f"invalid scenario manifest: {manifest_path.relative_to(ROOT)}")
             continue
+        relative = manifest_path.relative_to(SCENARIOS)
+        kind = relative.parts[0] if relative.parts else ""
+        name = manifest.get("name")
+        if kind not in {"valid", "invalid"} or not isinstance(name, str) or not name:
+            failures.append(f"scenario must be under valid/ or invalid/ and declare name: {relative}")
+            continue
+        if name != manifest_path.parent.name:
+            failures.append(f"scenario name must match directory: {relative}")
+        if name in scenarios:
+            failures.append(f"duplicate scenario name: {name}")
+            continue
+        if "validate" in manifest:
+            failures.append(f"scenario {name}: validate is not allowed")
+
+        expected = manifest.get("expectedSemanticErrors")
+        if kind == "valid" and expected is not None:
+            failures.append(f"valid scenario {name}: expectedSemanticErrors is not allowed")
+        if kind == "invalid" and (
+            not isinstance(expected, list)
+            or not expected
+            or not all(isinstance(code, str) and code for code in expected)
+        ):
+            failures.append(f"invalid scenario {name}: expectedSemanticErrors must be a non-empty string list")
+
+        edges: set[tuple[str, str]] = set()
+        raw_edges = manifest.get("causationEdges", [])
+        if not isinstance(raw_edges, list):
+            failures.append(f"scenario {name}: causationEdges must be a list")
+            raw_edges = []
+        for edge in raw_edges:
+            if not isinstance(edge, dict) or not isinstance(edge.get("from"), str) or not isinstance(edge.get("to"), str):
+                failures.append(f"scenario {name}: invalid causation edge")
+                continue
+            edges.add((edge["from"], edge["to"]))
+
+        forbidden = manifest.get("forbiddenEventTypes", [])
+        if not isinstance(forbidden, list) or not all(isinstance(item, str) for item in forbidden):
+            failures.append(f"scenario {name}: forbiddenEventTypes must be a string list")
+            forbidden = []
         instances: list[Any] = []
         for fixture_name in manifest["fixtures"]:
             fixture = (ROOT / fixture_name).resolve()
@@ -388,8 +424,13 @@ def load_scenarios(loaded: dict[Path, Any], failures: list[str]) -> tuple[dict[s
             instances.append(loaded[fixture])
             fixture_scenarios.setdefault(fixture, []).append(name)
         scenarios[name] = instances
-        validation_enabled[name] = manifest.get("validate", True) is True
-    return scenarios, fixture_scenarios, validation_enabled
+        scenario_specs[name] = {
+            "kind": kind,
+            "causation_edges": edges,
+            "expected_errors": set(expected or []),
+            "forbidden_event_types": set(forbidden),
+        }
+    return scenarios, fixture_scenarios, scenario_specs
 
 
 def main() -> int:
@@ -452,16 +493,24 @@ def main() -> int:
             detail = errors[0].message if errors else ", ".join(semantic)
             failures.append(f"valid example failed {example.relative_to(ROOT)}: {detail}")
 
-    scenarios, fixture_scenarios, scenario_validation = load_scenarios(loaded, failures)
-    scenario_contexts: dict[str, dict[str, dict[str, Any]]] = {}
+    scenarios, fixture_scenarios, scenario_specs = load_scenarios(loaded, failures)
+    scenario_contexts: dict[str, dict[str, Any]] = {}
     for name, instances in scenarios.items():
-        context, context_failures = build_semantic_context(instances)
+        spec = scenario_specs[name]
+        context, context_failures = build_semantic_context(instances, spec["causation_edges"])
         scenario_contexts[name] = context
-        if not scenario_validation[name]:
-            continue
-        failures.extend(f"scenario {name}: {failure}" for failure in context_failures + supersession_graph_errors(context))
+        scenario_errors = context_failures + supersession_graph_errors(context)
         for instance in instances:
-            failures.extend(f"scenario {name}: {failure}" for failure in semantic_errors(instance, context))
+            scenario_errors.extend(semantic_errors(instance, context))
+            if isinstance(instance, dict) and instance.get("eventType") in spec["forbidden_event_types"]:
+                scenario_errors.append(f"FORBIDDEN_EVENT_TYPE_PRESENT:{instance['eventType']}")
+        actual_codes = {error.split(":", 1)[0] for error in scenario_errors}
+        if spec["kind"] == "valid":
+            failures.extend(f"scenario {name}: {failure}" for failure in scenario_errors)
+        elif actual_codes != spec["expected_errors"]:
+            failures.append(
+                f"invalid scenario {name}: expected {sorted(spec['expected_errors'])}, got {sorted(actual_codes)}"
+            )
 
     compatibility_checks = 0
     for example, schema_path in valid_schema_paths.items():
@@ -479,7 +528,10 @@ def main() -> int:
             semantic = semantic_errors(upgraded)
             for scenario_name in fixture_scenarios.get(example, []):
                 scenario_instances = [upgraded if item is loaded[example] else item for item in scenarios[scenario_name]]
-                upgraded_context, context_failures = build_semantic_context(scenario_instances)
+                spec = scenario_specs[scenario_name]
+                upgraded_context, context_failures = build_semantic_context(
+                    scenario_instances, spec["causation_edges"]
+                )
                 semantic.extend(context_failures + supersession_graph_errors(upgraded_context))
                 semantic.extend(semantic_errors(upgraded, upgraded_context))
             compatibility_checks += 1

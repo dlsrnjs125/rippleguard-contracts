@@ -1,5 +1,5 @@
 {
-  "validate": true,
+  "name": "proposal-more-evidence",
   "fixtures": [
     "examples/valid/domain/evaluation-run--completed.json",
     "examples/valid/agent-output/decision-envelope--more-evidence.json"

@@ -14,7 +14,7 @@ Phase 1 final Decision Commands require a completed Evaluation Run and complete 
 
 Phase 1 also requires referenced Runs, Decisions, and Commands to exist, requires direct Proposal-to-final mapping without an unexplained policy override, and fixes Event producer ownership. Future policy transformations require a separate versioned contract and ADR.
 
-Scenario validation additionally requires causal Events to exist in the same correlation flow and chronological order, Evaluation requests to match their immutable Run, unexpired Decision provenance to match Run components, and supersession to use a newer Snapshot and terminal predecessor without graph cycles.
+Scenario validation additionally requires causal Events to exist in the same correlation flow and follow the Scenario's declared route, Evaluation requests to match their immutable Run, completed Events to reference a post-event `COMPLETED` Run snapshot, unexpired Decision provenance to match Run components, and supersession to use a newer Snapshot and terminal predecessor without graph cycles. The Phase 1 baseline covers direct approval, direct rejection, evidence reassessment, and blocked-without-command routes.
 
 ## Deferred
 

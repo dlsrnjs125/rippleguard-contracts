@@ -1,0 +1,19 @@
+{
+  "name": "phase1-direct-approval",
+  "causationEdges": [
+    { "from": "loan.application.submitted.v1", "to": "governance.review.started.v1" },
+    { "from": "governance.review.started.v1", "to": "agent.evaluation.requested.v1" },
+    { "from": "agent.evaluation.requested.v1", "to": "agent.evaluation.completed.v1" },
+    { "from": "agent.evaluation.completed.v1", "to": "loan.decision.commanded.v1" },
+    { "from": "loan.decision.commanded.v1", "to": "loan.decision.finalized.v1" }
+  ],
+  "fixtures": [
+    "examples/valid/domain/evaluation-run--completed.json",
+    "examples/valid/events/v1.0.0/loan.application.submitted.v1.json",
+    "examples/valid/events/v1.0.0/governance.review.started.v1.json",
+    "examples/valid/events/v1.0.0/agent.evaluation.requested.v1--direct-approval.json",
+    "examples/valid/events/v1.0.0/agent.evaluation.completed.v1--direct-approval.json",
+    "examples/valid/events/v1.0.0/loan.decision.commanded.v1--direct-approval.json",
+    "examples/valid/events/v1.0.0/loan.decision.finalized.v1--direct-approval.json"
+  ]
+}

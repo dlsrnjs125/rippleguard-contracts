@@ -1,5 +1,14 @@
 {
-  "validate": true,
+  "name": "phase1-evidence-reassessment",
+  "causationEdges": [
+    { "from": "loan.application.submitted.v1", "to": "governance.review.started.v1" },
+    { "from": "governance.review.started.v1", "to": "governance.evidence.requested.v1" },
+    { "from": "governance.evidence.requested.v1", "to": "loan.evidence.updated.v1" },
+    { "from": "loan.evidence.updated.v1", "to": "agent.evaluation.requested.v1" },
+    { "from": "agent.evaluation.requested.v1", "to": "agent.evaluation.completed.v1" },
+    { "from": "agent.evaluation.completed.v1", "to": "loan.decision.commanded.v1" },
+    { "from": "loan.decision.commanded.v1", "to": "loan.decision.finalized.v1" }
+  ],
   "fixtures": [
     "examples/valid/domain/evaluation-run--blocked.json",
     "examples/valid/domain/evaluation-run--completed.json",

@@ -10,7 +10,7 @@ RippleGuard 서비스와 Agent 사이의 실행 가능한 JSON Schema 계약 원
 - `schemas/domain`: 상태와 Full SemVer Evaluation Run
 - `schemas/agent-output`: Full SemVer Decision Envelope와 최소 Assurance 결과
 - `examples/valid`, `examples/invalid`: 성공·실패 검증 fixture
-- `examples/scenarios`: causation과 cross-reference를 검증하는 격리된 Scenario context
+- `examples/scenarios/valid`, `examples/scenarios/invalid`: 경로별 causation과 cross-reference를 검증하는 격리된 Scenario context
 - `docs`: 범위와 버전·호환성 정책
 
 ## 검증
@@ -22,7 +22,7 @@ python -m pip install -r requirements-dev.txt
 make validate
 ```
 
-검증 명령은 JSON 문법, Schema 자체, `$ref`, 중복 `$id`, Scenario별 causation·cross-reference, cross-field 의미 제약, 모든 versioned 계약의 fixture-backed minor 호환성, valid fixture의 성공과 manifest에 선언된 invalid fixture의 예상 실패를 확인합니다.
+검증 명령은 JSON 문법, Schema 자체, `$ref`, 중복 `$id`, Scenario가 선언한 causation edge와 cross-reference, cross-field 의미 제약, 모든 versioned 계약의 fixture-backed minor 호환성, valid fixture의 성공과 invalid fixture·Scenario의 예상 실패를 확인합니다. Valid Scenario는 항상 검증되며 검증 우회 설정을 허용하지 않습니다.
 
 ## 버전 원칙
 

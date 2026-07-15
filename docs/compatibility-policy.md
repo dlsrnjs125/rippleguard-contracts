@@ -10,7 +10,13 @@ JSON Schema validation is supplemented by deterministic semantic invariants for 
 
 Repository semantic validation operates on the fixture set and protects the published contract baseline. It is not a runtime registry. Governance Service and other consumers must enforce the same referential integrity against their authoritative database state before processing or emitting messages.
 
-Independent Schema fixtures are validated in isolation. Cross-reference, causation, identifier uniqueness, and supersession graph rules run only within an explicit `examples/scenarios/<name>/context.json`, preventing unrelated fixtures from sharing a global synthetic database. Invalid fixture expectations and their optional Scenario context live in `examples/invalid/manifest.json`.
+Independent Schema fixtures are validated in isolation. Cross-reference, causation, identifier uniqueness, and supersession graph rules run only within an explicit Scenario, preventing unrelated fixtures from sharing a global synthetic database. Each Scenario declares its legal `causationEdges`; this keeps direct evaluation and evidence reassessment as separate valid routes instead of forcing all Cases through one global sequence.
+
+`examples/scenarios/valid/**` is always validated and cannot opt out. `examples/scenarios/invalid/**` must declare a non-empty `expectedSemanticErrors` list, which must exactly match the errors produced by that Scenario. The legacy `validate: false` escape hatch is prohibited. Individual invalid fixture expectations and their optional Scenario context remain in `examples/invalid/manifest.json`.
+
+`causationId` is the source of truth for causal order. `occurredAt` is a secondary guard that detects only a strict time reversal; equal timestamps are legal because independently produced Events can share the same clock precision.
+
+Scenario domain objects are post-event state snapshots. Therefore, when an `agent.evaluation.completed.v1` Event is present, its referenced Evaluation Run must already have `status: COMPLETED` in the same Scenario context.
 
 The Schema `producer` field expresses event ownership, not authentication. Runtime consumers must compare it with authenticated Kafka credentials or workload identity; a matching JSON string alone is not trusted service identity.
 
