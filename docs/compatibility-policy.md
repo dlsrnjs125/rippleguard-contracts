@@ -10,4 +10,8 @@ JSON Schema validation is supplemented by deterministic semantic invariants for 
 
 Repository semantic validation operates on the fixture set and protects the published contract baseline. It is not a runtime registry. Governance Service and other consumers must enforce the same referential integrity against their authoritative database state before processing or emitting messages.
 
+Independent Schema fixtures are validated in isolation. Cross-reference, causation, identifier uniqueness, and supersession graph rules run only within an explicit `examples/scenarios/<name>/context.json`, preventing unrelated fixtures from sharing a global synthetic database. Invalid fixture expectations and their optional Scenario context live in `examples/invalid/manifest.json`.
+
 The Schema `producer` field expresses event ownership, not authentication. Runtime consumers must compare it with authenticated Kafka credentials or workload identity; a matching JSON string alone is not trusted service identity.
+
+For Phase 1 mock evaluation, Governance Service is the publishing `producer` and `mock-evaluator` is the logical `evaluatorId`. Later Agent execution uses `agent-runtime` as the service producer and a named Agent as evaluator. Decision `generatorRef` values must match the Agent, Model, and Prompt components recorded by the referenced Evaluation Run.

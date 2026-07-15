@@ -1,0 +1,7 @@
+{
+  "validate": false,
+  "fixtures": [
+    "examples/invalid/domain/evaluation-run--cycle-a.json",
+    "examples/invalid/domain/evaluation-run--cycle-b.json"
+  ]
+}

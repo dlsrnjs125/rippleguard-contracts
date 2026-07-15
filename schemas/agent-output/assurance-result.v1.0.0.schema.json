@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.rippleguard.dev/agent-output/assurance-result.schema.json",
+  "$id": "https://schemas.rippleguard.dev/agent-output/assurance-result.v1.0.0.schema.json",
   "title": "Phase 1 Assurance Result",
   "description": "Minimal deterministic result for the Phase 1 mock flow; it is not the final Assurance Profile or OPA input contract.",
   "type": "string",

@@ -14,6 +14,8 @@ Phase 1 final Decision Commands require a completed Evaluation Run and complete 
 
 Phase 1 also requires referenced Runs, Decisions, and Commands to exist, requires direct Proposal-to-final mapping without an unexplained policy override, and fixes Event producer ownership. Future policy transformations require a separate versioned contract and ADR.
 
+Scenario validation additionally requires causal Events to exist in the same correlation flow and chronological order, Evaluation requests to match their immutable Run, unexpired Decision provenance to match Run components, and supersession to use a newer Snapshot and terminal predecessor without graph cycles.
+
 ## Deferred
 
 Phase 0 does not establish final Consequence Envelope, Evidence & Control Findings, Assurance Profile, OPA Policy Input, REST/OpenAPI, Registry Server, or language-specific DTO contracts. Those contracts require later-phase evidence and policy decisions and must not be inferred from these minimum schemas.

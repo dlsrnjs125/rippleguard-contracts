@@ -2,12 +2,12 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.rippleguard.dev/events/agent.evaluation.completed.v1.0.0.schema.json",
   "title": "Agent Evaluation Completed v1.0.0",
-  "description": "Implementation-neutral evaluation result. MOCK and AGENT producers return the same Decision Envelope.",
+  "description": "Implementation-neutral evaluation result. producer is the authenticated publishing service; evaluatorId identifies the logical mock or Agent evaluator.",
   "allOf": [
     { "$ref": "../common/event-envelope.schema.json" },
     {
       "properties": {
-        "producer": { "enum": ["mock-evaluator", "agent-runtime"] },
+        "producer": { "enum": ["governance-service", "agent-runtime"] },
         "eventType": { "const": "agent.evaluation.completed.v1" },
         "schemaVersion": { "const": "1.0.0" },
         "causationId": { "type": "string", "format": "uuid" },
@@ -17,16 +17,17 @@
             "evaluationRunId": { "type": "string", "format": "uuid" },
             "decisionCaseId": { "type": "string", "minLength": 1 },
             "evaluationMode": { "type": "string", "enum": ["MOCK", "AGENT"] },
+            "evaluatorId": { "type": "string", "minLength": 1 },
             "decisionEnvelope": { "$ref": "../agent-output/decision-envelope.v1.0.0.schema.json" }
           },
-          "required": ["evaluationRunId", "decisionCaseId", "evaluationMode", "decisionEnvelope"],
+          "required": ["evaluationRunId", "decisionCaseId", "evaluationMode", "evaluatorId", "decisionEnvelope"],
           "additionalProperties": false
         }
       }
     },
     {
       "if": { "properties": { "payload": { "properties": { "evaluationMode": { "const": "MOCK" } }, "required": ["evaluationMode"] } }, "required": ["payload"] },
-      "then": { "properties": { "producer": { "const": "mock-evaluator" } } },
+      "then": { "properties": { "producer": { "const": "governance-service" } } },
       "else": { "properties": { "producer": { "const": "agent-runtime" } } }
     }
   ],

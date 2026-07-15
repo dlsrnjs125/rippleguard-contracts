@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate all RippleGuard schemas and contract examples."""
+"""Validate RippleGuard schemas, fixtures, scenarios, and compatibility."""
 
 from __future__ import annotations
 
@@ -16,7 +16,7 @@ try:
     from jsonschema import FormatChecker, ValidationError, validators
     from referencing import Registry, Resource
 except ImportError:
-    print("ERROR: install development dependencies with: python -m pip install -r requirements-dev.txt", file=sys.stderr)
+    print("ERROR: install dependencies with: python -m pip install -r requirements-dev.txt", file=sys.stderr)
     raise SystemExit(2)
 
 
@@ -24,45 +24,12 @@ ROOT = Path(__file__).resolve().parents[1]
 SCHEMAS = ROOT / "schemas"
 VALID = ROOT / "examples" / "valid"
 INVALID = ROOT / "examples" / "invalid"
-
-EXPECTED_INVALID = {
-    "events/v1.0.0/loan.application.submitted.v1--missing-event-id.json": ("required", "eventId"),
-    "events/v1.0.0/loan.application.submitted.v1--bad-date.json": ("pattern", "occurredAt"),
-    "events/v1.0.0/loan.application.submitted.v1--non-null-root-causation.json": ("const", "causationId"),
-    "events/v1.0.0/governance.review.started.v1--null-causation.json": ("type", "causationId"),
-    "events/v1.0.0/governance.review.started.v1--mismatched-envelope-case.json": ("semantic", "EVENT_CASE_DECISION_MISMATCH"),
-    "events/v1.0.0/governance.evidence.requested.v1--missing-evaluation-run.json": ("required", "evaluationRunId"),
-    "events/v1.0.0/governance.evidence.requested.v1--unknown-evaluation-run.json": ("semantic", "EVIDENCE_REQUEST_RUN_NOT_FOUND"),
-    "events/v1.0.0/agent.evaluation.completed.v1--mismatched-identifiers.json": ("semantic", "EVALUATION_COMPLETED_ID_MISMATCH"),
-    "events/v1.0.0/agent.evaluation.completed.v1--unknown-evaluation-run.json": ("semantic", "EVALUATION_COMPLETED_RUN_NOT_FOUND"),
-    "events/v1.0.0/loan.decision.commanded.v1--approve-assurance-violated.json": ("const", "assuranceResult"),
-    "events/v1.0.0/loan.decision.commanded.v1--approve-assurance-incomplete.json": ("const", "assuranceResult"),
-    "events/v1.0.0/loan.decision.commanded.v1--reject-assurance-incomplete.json": ("const", "assuranceResult"),
-    "events/v1.0.0/loan.decision.commanded.v1--blocked-evaluation-run.json": ("semantic", "COMMAND_EVALUATION_NOT_COMPLETED"),
-    "events/v1.0.0/loan.decision.commanded.v1--conditional-approve-without-contract.json": ("enum", "finalDecision"),
-    "events/v1.0.0/loan.decision.commanded.v1--mismatched-evaluation-run.json": ("semantic", "COMMAND_DECISION_REFERENCE_MISMATCH"),
-    "events/v1.0.0/loan.decision.commanded.v1--unknown-decision.json": ("semantic", "COMMAND_DECISION_NOT_FOUND"),
-    "events/v1.0.0/loan.decision.commanded.v1--unknown-evaluation-run.json": ("semantic", "COMMAND_EVALUATION_RUN_NOT_FOUND"),
-    "events/v1.0.0/loan.decision.commanded.v1--approve-from-reject-proposal.json": ("semantic", "COMMAND_PROPOSAL_DECISION_MISMATCH"),
-    "events/v1.0.0/loan.decision.commanded.v1--reject-from-approve-proposal.json": ("semantic", "COMMAND_PROPOSAL_DECISION_MISMATCH"),
-    "events/v1.0.0/loan.decision.commanded.v1--command-from-more-evidence-proposal.json": ("semantic", "COMMAND_NOT_ALLOWED_FOR_PROPOSAL"),
-    "events/v1.0.0/loan.decision.commanded.v1--command-from-conditional-proposal.json": ("semantic", "COMMAND_NOT_ALLOWED_FOR_PROPOSAL"),
-    "events/v1.0.0/loan.decision.commanded.v1--wrong-producer.json": ("const", "producer"),
-    "events/v1.0.0/loan.decision.finalized.v1--mismatched-command-reference.json": ("semantic", "FINALIZED_COMMAND_REFERENCE_MISMATCH"),
-    "events/v1.0.0/loan.decision.finalized.v1--unknown-command.json": ("semantic", "FINALIZED_COMMAND_NOT_FOUND"),
-    "domain/loan-application-status--bad-enum.json": ("enum", "PENDING"),
-    "domain/evaluation-run--missing-provenance.json": ("required", "componentVersions"),
-    "domain/evaluation-run--unknown-supersedes-run.json": ("semantic", "EVALUATION_RUN_SUPERSEDES_NOT_FOUND"),
-    "domain/evaluation-run--self-supersedes.json": ("semantic", "EVALUATION_RUN_SELF_SUPERSEDES"),
-    "domain/evaluation-run--duplicate-component-identity.json": ("semantic", "EVALUATION_COMPONENT_IDENTITY_DUPLICATE"),
-    "agent-output/decision-envelope--bad-proposal.json": ("enum", "APPROVE"),
-    "external-risk-signal/external-risk-signal--suspected-customer-scope.json": ("const", "subjectType"),
-    "external-risk-signal/external-risk-signal--overlapping-uses.json": ("semantic", "RISK_SIGNAL_USE_OVERLAP"),
-    "external-risk-signal/external-risk-signal--expired-before-occurrence.json": ("semantic", "RISK_SIGNAL_INVALID_LIFETIME"),
-    "external-risk-signal/external-risk-signal--transaction-customer-use.json": ("semantic", "TRANSACTION_SIGNAL_CUSTOMER_USE"),
-}
-
-EVENT_SCHEMA_NAME = re.compile(r"^(?P<base>.+)\.v(?P<major>[1-9][0-9]*)\.(?P<minor>[0-9]+)\.(?P<patch>[0-9]+)\.schema\.json$")
+SCENARIOS = ROOT / "examples" / "scenarios"
+INVALID_MANIFEST = INVALID / "manifest.json"
+VERSIONED_SCHEMA_NAME = re.compile(
+    r"^(?P<base>.+)\.v(?P<major>[1-9][0-9]*)\.(?P<minor>[0-9]+)\.(?P<patch>[0-9]+)\.schema\.json$"
+)
+VERSION_DIR = re.compile(r"v[1-9][0-9]*\.[0-9]+\.[0-9]+")
 
 
 def json_files(directory: Path) -> list[Path]:
@@ -88,16 +55,33 @@ def nested_refs(value: Any) -> Iterator[str]:
             yield from nested_refs(child)
 
 
+def property_consts(value: Any, property_name: str) -> set[Any]:
+    found: set[Any] = set()
+    if isinstance(value, dict):
+        candidate = value.get("properties", {}).get(property_name)
+        if isinstance(candidate, dict) and "const" in candidate:
+            found.add(candidate["const"])
+        for child in value.values():
+            found.update(property_consts(child, property_name))
+    elif isinstance(value, list):
+        for child in value:
+            found.update(property_consts(child, property_name))
+    return found
+
+
 def schema_for_example(example: Path, example_root: Path, instance: Any) -> Path:
     relative = example.relative_to(example_root)
     contract_name = relative.name.split("--", 1)[0] if "--" in relative.name else relative.stem
-    if len(relative.parts) >= 3 and relative.parts[0] == "events" and re.fullmatch(r"v[1-9][0-9]*\.[0-9]+\.[0-9]+", relative.parts[1]):
+    if len(relative.parts) >= 3 and relative.parts[0] == "events" and VERSION_DIR.fullmatch(relative.parts[1]):
         version = relative.parts[1]
         major = version.split(".", 1)[0]
         if not contract_name.endswith(f".{major}"):
             return SCHEMAS / "__invalid_event_fixture_name__"
         event_base = contract_name[: -(len(major) + 1)]
         return SCHEMAS / "events" / f"{event_base}.{version}.schema.json"
+    if len(relative.parts) >= 3 and VERSION_DIR.fullmatch(relative.parts[-2]):
+        version = relative.parts[-2]
+        return SCHEMAS.joinpath(*relative.parts[:-2]) / f"{contract_name}.{version}.schema.json"
     if isinstance(instance, dict) and re.fullmatch(r"[1-9][0-9]*\.[0-9]+\.[0-9]+", str(instance.get("schemaVersion", ""))):
         versioned = SCHEMAS / relative.parent / f"{contract_name}.v{instance['schemaVersion']}.schema.json"
         if versioned.is_file():
@@ -111,55 +95,65 @@ def errors_for(instance: Any, schema: dict[str, Any], registry: Registry) -> lis
     return sorted(validator.iter_errors(instance), key=lambda error: (list(error.absolute_path), error.message))
 
 
-def register_unique(index: dict[str, Any], key: Any, value: Any, duplicate_error: str, failures: list[str]) -> None:
-    if not key:
-        return
-    if key in index:
-        failures.append(f"{duplicate_error}: {key}")
-        return
-    index[key] = value
-
-
-def build_semantic_context(instances: list[Any]) -> tuple[dict[str, dict[str, Any]], list[str]]:
-    context_failures: list[str] = []
-    events: dict[str, Any] = {}
-    decisions: dict[str, Any] = {}
-    commands: dict[str, Any] = {}
-    runs: dict[str, Any] = {}
-    risk_signals: dict[str, Any] = {}
-    evidence_requests: dict[str, Any] = {}
-    for instance in instances:
-        if not isinstance(instance, dict):
-            continue
-        payload = instance.get("payload", {})
-        register_unique(events, instance.get("eventId"), instance, "DUPLICATE_EVENT_ID", context_failures)
-        register_unique(risk_signals, instance.get("riskSignalId"), instance, "DUPLICATE_RISK_SIGNAL_ID", context_failures)
-        if instance.get("evaluationRunId") and instance.get("status") in {"CREATED", "RUNNING", "COMPLETED", "BLOCKED", "FAILED", "CANCELLED"}:
-            register_unique(runs, instance["evaluationRunId"], instance, "DUPLICATE_EVALUATION_RUN_ID", context_failures)
-        if instance.get("decisionId") and instance.get("proposal"):
-            register_unique(decisions, instance["decisionId"], instance, "DUPLICATE_DECISION_ID", context_failures)
-        if instance.get("eventType") == "agent.evaluation.completed.v1":
-            decision = payload.get("decisionEnvelope", {})
-            register_unique(decisions, decision.get("decisionId"), decision, "DUPLICATE_DECISION_ID", context_failures)
-        if instance.get("eventType") == "loan.decision.commanded.v1":
-            register_unique(commands, payload.get("commandId"), payload, "DUPLICATE_COMMAND_ID", context_failures)
-        if instance.get("eventType") == "governance.evidence.requested.v1":
-            register_unique(evidence_requests, payload.get("requestId"), payload, "DUPLICATE_EVIDENCE_REQUEST_ID", context_failures)
-    return {
-        "events": events,
-        "decisions": decisions,
-        "commands": commands,
-        "runs": runs,
-        "risk_signals": risk_signals,
-        "evidence_requests": evidence_requests,
-    }, context_failures
-
-
 def parse_timestamp(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
-def semantic_errors(instance: Any, context: dict[str, dict[str, Any]]) -> list[str]:
+def register_unique(index: dict[str, Any], key: Any, value: Any, code: str, failures: list[str]) -> None:
+    if not key:
+        return
+    if key in index:
+        failures.append(f"{code}: {key}")
+    else:
+        index[key] = value
+
+
+def build_semantic_context(instances: list[Any]) -> tuple[dict[str, dict[str, Any]], list[str]]:
+    failures: list[str] = []
+    context: dict[str, dict[str, Any]] = {
+        "events": {}, "decisions": {}, "commands": {}, "runs": {},
+        "risk_signals": {}, "evidence_requests": {},
+    }
+    for instance in instances:
+        if not isinstance(instance, dict):
+            continue
+        payload = instance.get("payload", {})
+        register_unique(context["events"], instance.get("eventId"), instance, "DUPLICATE_EVENT_ID", failures)
+        register_unique(context["risk_signals"], instance.get("riskSignalId"), instance, "DUPLICATE_RISK_SIGNAL_ID", failures)
+        if instance.get("evaluationRunId") and instance.get("componentVersions"):
+            register_unique(context["runs"], instance["evaluationRunId"], instance, "DUPLICATE_EVALUATION_RUN_ID", failures)
+        if instance.get("decisionId") and instance.get("proposal"):
+            register_unique(context["decisions"], instance["decisionId"], instance, "DUPLICATE_DECISION_ID", failures)
+        if instance.get("eventType") == "agent.evaluation.completed.v1":
+            decision = payload.get("decisionEnvelope", {})
+            register_unique(context["decisions"], decision.get("decisionId"), decision, "DUPLICATE_DECISION_ID", failures)
+        if instance.get("eventType") == "loan.decision.commanded.v1":
+            register_unique(context["commands"], payload.get("commandId"), payload, "DUPLICATE_COMMAND_ID", failures)
+        if instance.get("eventType") == "governance.evidence.requested.v1":
+            register_unique(context["evidence_requests"], payload.get("requestId"), payload, "DUPLICATE_EVIDENCE_REQUEST_ID", failures)
+    return context, failures
+
+
+def decision_provenance_errors(decision: dict[str, Any], run: dict[str, Any]) -> list[str]:
+    generator = decision.get("generatorRef", {})
+    failures: list[str] = []
+    if decision.get("evaluatorId") != generator.get("agentName"):
+        failures.append("DECISION_EVALUATOR_GENERATOR_MISMATCH")
+    required = {
+        ("AGENT", generator.get("agentName"), generator.get("agentVersion")),
+        ("MODEL", generator.get("modelName"), generator.get("modelVersion")),
+        ("PROMPT", generator.get("promptName"), generator.get("promptVersion")),
+    }
+    actual = {
+        (component.get("componentType"), component.get("componentName"), component.get("version"))
+        for component in run.get("componentVersions", [])
+    }
+    if not required.issubset(actual):
+        failures.append("DECISION_GENERATOR_NOT_IN_RUN")
+    return failures
+
+
+def semantic_errors(instance: Any, context: dict[str, dict[str, Any]] | None = None) -> list[str]:
     if not isinstance(instance, dict):
         return []
     failures: list[str] = []
@@ -170,23 +164,107 @@ def semantic_errors(instance: Any, context: dict[str, dict[str, Any]]) -> list[s
         failures.append("EVENT_CASE_APPLICATION_MISMATCH")
     if event_type and payload.get("decisionCaseId") and instance.get("caseId") != payload.get("decisionCaseId"):
         failures.append("EVENT_CASE_DECISION_MISMATCH")
+    if event_type and payload.get("applicationId") and instance.get("correlationId") != payload.get("applicationId"):
+        failures.append("EVENT_APPLICATION_CORRELATION_MISMATCH")
 
     if event_type == "agent.evaluation.completed.v1":
         decision = payload.get("decisionEnvelope", {})
         if payload.get("evaluationRunId") != decision.get("evaluationRunId") or payload.get("decisionCaseId") != decision.get("decisionCaseId"):
             failures.append("EVALUATION_COMPLETED_ID_MISMATCH")
+        if payload.get("evaluatorId") != decision.get("evaluatorId"):
+            failures.append("EVALUATION_COMPLETED_EVALUATOR_MISMATCH")
+        try:
+            if parse_timestamp(instance["occurredAt"]) >= parse_timestamp(decision["validUntil"]):
+                failures.append("EVALUATION_COMPLETED_WITH_EXPIRED_DECISION")
+        except (KeyError, TypeError, ValueError):
+            pass
+
+    if instance.get("evaluationRunId") and instance.get("componentVersions"):
+        keys = [(item.get("componentType"), item.get("componentName")) for item in instance["componentVersions"]]
+        if len(keys) != len(set(keys)):
+            failures.append("EVALUATION_COMPONENT_IDENTITY_DUPLICATE")
+        if instance.get("supersedesRunId") == instance.get("evaluationRunId"):
+            failures.append("EVALUATION_RUN_SELF_SUPERSEDES")
+
+    if "riskSignalId" in instance:
+        permitted = set(instance.get("permittedUses", []))
+        prohibited = set(instance.get("prohibitedUses", []))
+        if permitted & prohibited:
+            failures.append("RISK_SIGNAL_USE_OVERLAP")
+        try:
+            if parse_timestamp(instance["validUntil"]) <= parse_timestamp(instance["occurredAt"]):
+                failures.append("RISK_SIGNAL_INVALID_LIFETIME")
+        except (KeyError, TypeError, ValueError):
+            pass
+        if instance.get("subjectType") == "TRANSACTION" and "CUSTOMER_CREDIT_RISK_ASSESSMENT" in permitted:
+            failures.append("TRANSACTION_SIGNAL_CUSTOMER_USE")
+
+    if context is None:
+        return failures
+
+    if event_type and instance.get("causationId") is not None:
+        cause = context["events"].get(instance["causationId"])
+        if cause is None:
+            failures.append("CAUSATION_EVENT_NOT_FOUND")
+        else:
+            if cause.get("correlationId") != instance.get("correlationId"):
+                failures.append("CAUSATION_CORRELATION_MISMATCH")
+            try:
+                if parse_timestamp(cause["occurredAt"]) > parse_timestamp(instance["occurredAt"]):
+                    failures.append("CAUSATION_TIME_ORDER_INVALID")
+            except (KeyError, TypeError, ValueError):
+                pass
+            allowed_causes = {
+                "governance.review.started.v1": {"loan.application.submitted.v1"},
+                "governance.evidence.requested.v1": {"governance.review.started.v1"},
+                "loan.evidence.updated.v1": {"governance.evidence.requested.v1"},
+                "agent.evaluation.requested.v1": {"loan.evidence.updated.v1"},
+                "agent.evaluation.completed.v1": {"agent.evaluation.requested.v1"},
+                "loan.decision.commanded.v1": {"agent.evaluation.completed.v1"},
+                "loan.decision.finalized.v1": {"loan.decision.commanded.v1"},
+            }
+            allowed = allowed_causes.get(event_type)
+            if allowed and cause.get("eventType") not in allowed:
+                failures.append("CAUSATION_EVENT_TYPE_INVALID")
+            cause_payload = cause.get("payload", {})
+            if event_type == "agent.evaluation.completed.v1" and cause_payload.get("evaluationRunId") != payload.get("evaluationRunId"):
+                failures.append("CAUSATION_EVALUATION_RUN_MISMATCH")
+            if event_type == "loan.decision.commanded.v1" and cause_payload.get("decisionEnvelope", {}).get("decisionId") != payload.get("decisionId"):
+                failures.append("CAUSATION_DECISION_MISMATCH")
+            if event_type == "loan.decision.finalized.v1" and cause_payload.get("commandId") != payload.get("commandId"):
+                failures.append("CAUSATION_COMMAND_MISMATCH")
+
+    if event_type == "agent.evaluation.requested.v1":
+        run = context["runs"].get(payload.get("evaluationRunId"))
+        if run is None:
+            failures.append("EVALUATION_REQUEST_RUN_NOT_FOUND")
+        else:
+            if run.get("decisionCaseId") != payload.get("decisionCaseId"):
+                failures.append("EVALUATION_REQUEST_RUN_CASE_MISMATCH")
+            if run.get("inputSnapshotVersion") != payload.get("inputSnapshotVersion"):
+                failures.append("EVALUATION_REQUEST_SNAPSHOT_MISMATCH")
+            if run.get("executionPlanVersion") != payload.get("executionPlanVersion"):
+                failures.append("EVALUATION_REQUEST_PLAN_MISMATCH")
+
+    if event_type == "agent.evaluation.completed.v1":
+        decision = payload.get("decisionEnvelope", {})
         run = context["runs"].get(payload.get("evaluationRunId"))
         if run is None:
             failures.append("EVALUATION_COMPLETED_RUN_NOT_FOUND")
-        elif run.get("decisionCaseId") != payload.get("decisionCaseId"):
-            failures.append("EVALUATION_COMPLETED_RUN_CASE_MISMATCH")
+        else:
+            if run.get("decisionCaseId") != payload.get("decisionCaseId"):
+                failures.append("EVALUATION_COMPLETED_RUN_CASE_MISMATCH")
+            failures.extend(decision_provenance_errors(decision, run))
 
     if event_type == "governance.evidence.requested.v1":
         run = context["runs"].get(payload.get("evaluationRunId"))
         if run is None:
             failures.append("EVIDENCE_REQUEST_RUN_NOT_FOUND")
-        elif run.get("decisionCaseId") != payload.get("decisionCaseId"):
-            failures.append("EVIDENCE_REQUEST_RUN_CASE_MISMATCH")
+        else:
+            if run.get("decisionCaseId") != payload.get("decisionCaseId"):
+                failures.append("EVIDENCE_REQUEST_RUN_CASE_MISMATCH")
+            if run.get("inputSnapshotVersion") != payload.get("inputSnapshotVersion"):
+                failures.append("EVIDENCE_REQUEST_SNAPSHOT_MISMATCH")
 
     if event_type == "loan.decision.commanded.v1":
         decision = context["decisions"].get(payload.get("decisionId"))
@@ -195,12 +273,16 @@ def semantic_errors(instance: Any, context: dict[str, dict[str, Any]]) -> list[s
         elif payload.get("evaluationRunId") != decision.get("evaluationRunId") or payload.get("decisionCaseId") != decision.get("decisionCaseId"):
             failures.append("COMMAND_DECISION_REFERENCE_MISMATCH")
         else:
-            proposal_mapping = {"PROPOSE_APPROVE": "APPROVE", "PROPOSE_REJECT": "REJECT"}
-            expected_final = proposal_mapping.get(decision.get("proposal"))
-            if expected_final is None:
+            expected = {"PROPOSE_APPROVE": "APPROVE", "PROPOSE_REJECT": "REJECT"}.get(decision.get("proposal"))
+            if expected is None:
                 failures.append("COMMAND_NOT_ALLOWED_FOR_PROPOSAL")
-            elif payload.get("finalDecision") != expected_final:
+            elif payload.get("finalDecision") != expected:
                 failures.append("COMMAND_PROPOSAL_DECISION_MISMATCH")
+            try:
+                if parse_timestamp(instance["occurredAt"]) >= parse_timestamp(decision["validUntil"]):
+                    failures.append("COMMAND_DECISION_EXPIRED")
+            except (KeyError, TypeError, ValueError):
+                pass
         run = context["runs"].get(payload.get("evaluationRunId"))
         if run is None:
             failures.append("COMMAND_EVALUATION_RUN_NOT_FOUND")
@@ -215,66 +297,107 @@ def semantic_errors(instance: Any, context: dict[str, dict[str, Any]]) -> list[s
         elif any(payload.get(field) != command.get(field) for field in compared):
             failures.append("FINALIZED_COMMAND_REFERENCE_MISMATCH")
 
-    if instance.get("evaluationRunId") and instance.get("componentVersions"):
-        component_keys = [(component.get("componentType"), component.get("componentName")) for component in instance["componentVersions"]]
-        if len(component_keys) != len(set(component_keys)):
-            failures.append("EVALUATION_COMPONENT_IDENTITY_DUPLICATE")
-        supersedes = instance.get("supersedesRunId")
-        if supersedes == instance.get("evaluationRunId"):
-            failures.append("EVALUATION_RUN_SELF_SUPERSEDES")
-        elif supersedes is not None:
-            previous = context["runs"].get(supersedes)
-            if previous is None:
-                failures.append("EVALUATION_RUN_SUPERSEDES_NOT_FOUND")
-            elif previous.get("decisionCaseId") != instance.get("decisionCaseId"):
-                failures.append("EVALUATION_RUN_SUPERSEDES_CASE_MISMATCH")
+    if instance.get("decisionId") and instance.get("generatorRef"):
+        run = context["runs"].get(instance.get("evaluationRunId"))
+        if run is None:
+            failures.append("DECISION_EVALUATION_RUN_NOT_FOUND")
+        else:
+            failures.extend(decision_provenance_errors(instance, run))
 
-    if "riskSignalId" in instance:
-        permitted = set(instance.get("permittedUses", []))
-        prohibited = set(instance.get("prohibitedUses", []))
-        if permitted & prohibited:
-            failures.append("RISK_SIGNAL_USE_OVERLAP")
-        try:
-            if parse_timestamp(instance["validUntil"]) <= parse_timestamp(instance["occurredAt"]):
-                failures.append("RISK_SIGNAL_INVALID_LIFETIME")
-        except (KeyError, TypeError, ValueError):
-            pass
-        if instance.get("subjectType") == "TRANSACTION" and "CUSTOMER_CREDIT_RISK_ASSESSMENT" in permitted:
-            failures.append("TRANSACTION_SIGNAL_CUSTOMER_USE")
+    if instance.get("evaluationRunId") and instance.get("componentVersions") and instance.get("supersedesRunId") is not None:
+        previous = context["runs"].get(instance["supersedesRunId"])
+        if previous is None:
+            failures.append("EVALUATION_RUN_SUPERSEDES_NOT_FOUND")
+        else:
+            if previous.get("decisionCaseId") != instance.get("decisionCaseId"):
+                failures.append("EVALUATION_RUN_SUPERSEDES_CASE_MISMATCH")
+            if previous.get("inputSnapshotVersion") == instance.get("inputSnapshotVersion"):
+                failures.append("EVALUATION_RUN_SUPERSEDES_SNAPSHOT_UNCHANGED")
+            try:
+                if parse_timestamp(instance["createdAt"]) <= parse_timestamp(previous["createdAt"]):
+                    failures.append("EVALUATION_RUN_SUPERSEDES_TIME_INVALID")
+            except (KeyError, TypeError, ValueError):
+                pass
+            if previous.get("status") not in {"COMPLETED", "BLOCKED", "FAILED", "CANCELLED"}:
+                failures.append("EVALUATION_RUN_SUPERSEDES_NON_TERMINAL")
     return failures
 
 
-def event_schema_metadata(path: Path, schema: dict[str, Any]) -> tuple[str, tuple[int, int, int]] | None:
-    match = EVENT_SCHEMA_NAME.match(path.name)
-    if path.parent != SCHEMAS / "events" or not match:
-        return None
-    version = tuple(int(match.group(name)) for name in ("major", "minor", "patch"))
-    event_type = f"{match.group('base')}.v{version[0]}"
-    properties = schema.get("allOf", [{}, {}])[1].get("properties", {})
-    if properties.get("eventType", {}).get("const") != event_type:
-        raise ValueError(f"eventType does not match full SemVer filename: {path.relative_to(ROOT)}")
-    if properties.get("schemaVersion", {}).get("const") != ".".join(map(str, version)):
-        raise ValueError(f"schemaVersion does not match full SemVer filename: {path.relative_to(ROOT)}")
-    return event_type, version
+def supersession_graph_errors(context: dict[str, dict[str, Any]]) -> list[str]:
+    graph = {key: run.get("supersedesRunId") for key, run in context["runs"].items() if run.get("supersedesRunId")}
+    for start in graph:
+        seen: set[str] = set()
+        current: str | None = start
+        while current in graph:
+            if current in seen:
+                return ["EVALUATION_RUN_SUPERSESSION_CYCLE"]
+            seen.add(current)
+            current = graph[current]
+    return []
 
 
-def validate_versioned_schema_identity(path: Path, schema: dict[str, Any]) -> str | None:
-    match = EVENT_SCHEMA_NAME.match(path.name)
+def versioned_schema_metadata(path: Path) -> tuple[str, tuple[int, int, int]] | None:
+    match = VERSIONED_SCHEMA_NAME.match(path.name)
     if not match:
         return None
-    version = ".".join(match.group(name) for name in ("major", "minor", "patch"))
+    version = tuple(int(match.group(name)) for name in ("major", "minor", "patch"))
+    relative_parent = path.parent.relative_to(SCHEMAS).as_posix()
+    if path.parent == SCHEMAS / "events":
+        key = f"events/{match.group('base')}.v{version[0]}"
+    else:
+        key = f"{relative_parent}/{match.group('base')}"
+    return key, version
+
+
+def validate_schema_identity(path: Path, schema: dict[str, Any]) -> list[str]:
+    failures: list[str] = []
+    metadata = versioned_schema_metadata(path)
+    if not metadata:
+        return failures
+    key, version = metadata
+    version_text = ".".join(map(str, version))
     if not str(schema.get("$id", "")).endswith(f"/{path.name}"):
-        return f"versioned schema $id does not match filename: {path.relative_to(ROOT)}"
-    if path.parent != SCHEMAS / "events" and schema.get("properties", {}).get("schemaVersion", {}).get("const") != version:
-        return f"schemaVersion does not match full SemVer filename: {path.relative_to(ROOT)}"
-    return None
+        failures.append(f"versioned schema $id does not match filename: {path.relative_to(ROOT)}")
+    if path.parent == SCHEMAS / "events":
+        expected_event = key.split("/", 1)[1]
+        if property_consts(schema, "eventType") != {expected_event}:
+            failures.append(f"eventType does not match filename: {path.relative_to(ROOT)}")
+        if property_consts(schema, "schemaVersion") != {version_text}:
+            failures.append(f"schemaVersion does not match filename: {path.relative_to(ROOT)}")
+    elif schema.get("type") == "object" and property_consts(schema, "schemaVersion") != {version_text}:
+        failures.append(f"schemaVersion does not match filename: {path.relative_to(ROOT)}")
+    return failures
+
+
+def load_scenarios(loaded: dict[Path, Any], failures: list[str]) -> tuple[dict[str, list[Any]], dict[Path, list[str]], dict[str, bool]]:
+    scenarios: dict[str, list[Any]] = {}
+    fixture_scenarios: dict[Path, list[str]] = {}
+    validation_enabled: dict[str, bool] = {}
+    for manifest_path in json_files(SCENARIOS):
+        manifest = loaded.get(manifest_path)
+        name = manifest_path.parent.name
+        if not isinstance(manifest, dict) or not isinstance(manifest.get("fixtures"), list):
+            failures.append(f"invalid scenario manifest: {manifest_path.relative_to(ROOT)}")
+            continue
+        instances: list[Any] = []
+        for fixture_name in manifest["fixtures"]:
+            fixture = (ROOT / fixture_name).resolve()
+            if ROOT not in fixture.parents or fixture not in loaded:
+                failures.append(f"scenario {name} references missing fixture: {fixture_name}")
+                continue
+            instances.append(loaded[fixture])
+            fixture_scenarios.setdefault(fixture, []).append(name)
+        scenarios[name] = instances
+        validation_enabled[name] = manifest.get("validate", True) is True
+    return scenarios, fixture_scenarios, validation_enabled
 
 
 def main() -> int:
     failures: list[str] = []
-    all_json = json_files(SCHEMAS) + json_files(VALID) + json_files(INVALID)
+    invalid_paths = [path for path in json_files(INVALID) if path != INVALID_MANIFEST]
+    valid_paths = json_files(VALID)
+    all_json = json_files(SCHEMAS) + valid_paths + invalid_paths + [INVALID_MANIFEST] + json_files(SCENARIOS)
     loaded: dict[Path, Any] = {}
-
     for path in all_json:
         try:
             loaded[path] = load_json(path)
@@ -290,113 +413,129 @@ def main() -> int:
         failures.append("every schema must define a non-empty $id")
 
     registry = Registry()
-    event_schemas: dict[str, list[tuple[tuple[int, int, int], Path, dict[str, Any]]]] = {}
+    versioned_schemas: dict[str, list[tuple[tuple[int, int, int], Path, dict[str, Any]]]] = {}
     for path in schema_paths:
         schema = loaded.get(path)
         if not isinstance(schema, dict):
             continue
         resource = Resource.from_contents(schema)
         registry = registry.with_resource(path.resolve().as_uri(), resource)
-        if schema.get("$id"):
-            registry = registry.with_resource(schema["$id"], resource)
-
-        identity_error = validate_versioned_schema_identity(path, schema)
-        if identity_error:
-            failures.append(identity_error)
-
-        try:
-            metadata = event_schema_metadata(path, schema)
-            if metadata:
-                event_type, version = metadata
-                event_schemas.setdefault(event_type, []).append((version, path, schema))
-        except ValueError as error:
-            failures.append(str(error))
-
+        registry = registry.with_resource(schema["$id"], resource)
+        failures.extend(validate_schema_identity(path, schema))
+        metadata = versioned_schema_metadata(path)
+        if metadata:
+            key, version = metadata
+            versioned_schemas.setdefault(key, []).append((version, path, schema))
         try:
             validators.validator_for(schema).check_schema(schema)
-        except Exception as error:  # jsonschema raises a family of schema errors
+        except Exception as error:
             failures.append(f"invalid schema {path.relative_to(ROOT)}: {error}")
-
         for reference in nested_refs(schema):
             if reference.startswith("#"):
                 continue
             if "://" in reference or reference.startswith("urn:"):
                 failures.append(f"non-relative $ref in {path.relative_to(ROOT)}: {reference}")
                 continue
-            target = (path.parent / reference.split("#", 1)[0]).resolve()
-            if not target.is_file():
+            if not (path.parent / reference.split("#", 1)[0]).resolve().is_file():
                 failures.append(f"unresolved $ref in {path.relative_to(ROOT)}: {reference}")
 
-    valid_paths = json_files(VALID)
-    semantic_context, context_failures = build_semantic_context([loaded[path] for path in valid_paths if path in loaded])
-    failures.extend(context_failures)
-    valid_events: list[tuple[Path, dict[str, Any]]] = []
+    valid_schema_paths: dict[Path, Path] = {}
     for example in valid_paths:
         schema_path = schema_for_example(example, VALID, loaded.get(example))
+        valid_schema_paths[example] = schema_path
         if schema_path not in loaded:
             failures.append(f"missing schema for valid example {example.relative_to(ROOT)}")
             continue
         errors = errors_for(loaded[example], loaded[schema_path], registry)
-        if errors:
-            failures.append(f"valid example failed {example.relative_to(ROOT)}: {errors[0].message}")
+        semantic = semantic_errors(loaded[example])
+        if errors or semantic:
+            detail = errors[0].message if errors else ", ".join(semantic)
+            failures.append(f"valid example failed {example.relative_to(ROOT)}: {detail}")
+
+    scenarios, fixture_scenarios, scenario_validation = load_scenarios(loaded, failures)
+    scenario_contexts: dict[str, dict[str, dict[str, Any]]] = {}
+    for name, instances in scenarios.items():
+        context, context_failures = build_semantic_context(instances)
+        scenario_contexts[name] = context
+        if not scenario_validation[name]:
             continue
-        semantic = semantic_errors(loaded[example], semantic_context)
-        if semantic:
-            failures.append(f"valid example failed semantic invariants {example.relative_to(ROOT)}: {', '.join(semantic)}")
-        if isinstance(loaded[example], dict) and loaded[example].get("eventType"):
-            valid_events.append((example, loaded[example]))
+        failures.extend(f"scenario {name}: {failure}" for failure in context_failures + supersession_graph_errors(context))
+        for instance in instances:
+            failures.extend(f"scenario {name}: {failure}" for failure in semantic_errors(instance, context))
 
     compatibility_checks = 0
-    for example, instance in valid_events:
-        event_type = instance["eventType"]
-        source_version = tuple(int(part) for part in instance["schemaVersion"].split("."))
-        for target_version, target_path, target_schema in event_schemas.get(event_type, []):
+    for example, schema_path in valid_schema_paths.items():
+        source = versioned_schema_metadata(schema_path)
+        if not source or schema_path not in loaded:
+            continue
+        key, source_version = source
+        for target_version, target_path, target_schema in versioned_schemas.get(key, []):
             if target_version <= source_version or target_version[0] != source_version[0]:
                 continue
-            upgraded_instance = deepcopy(instance)
-            upgraded_instance["schemaVersion"] = ".".join(map(str, target_version))
-            errors = errors_for(upgraded_instance, target_schema, registry)
-            semantic = semantic_errors(upgraded_instance, semantic_context)
+            upgraded = deepcopy(loaded[example])
+            if isinstance(upgraded, dict) and "schemaVersion" in upgraded:
+                upgraded["schemaVersion"] = ".".join(map(str, target_version))
+            schema_errors = errors_for(upgraded, target_schema, registry)
+            semantic = semantic_errors(upgraded)
+            for scenario_name in fixture_scenarios.get(example, []):
+                scenario_instances = [upgraded if item is loaded[example] else item for item in scenarios[scenario_name]]
+                upgraded_context, context_failures = build_semantic_context(scenario_instances)
+                semantic.extend(context_failures + supersession_graph_errors(upgraded_context))
+                semantic.extend(semantic_errors(upgraded, upgraded_context))
             compatibility_checks += 1
-            if errors or semantic:
-                detail = errors[0].message if errors else ", ".join(semantic)
-                failures.append(
-                    f"minor compatibility failed: {example.relative_to(ROOT)} fixture is not accepted by {target_path.relative_to(ROOT)}: {detail}"
-                )
+            if schema_errors or semantic:
+                detail = schema_errors[0].message if schema_errors else ", ".join(semantic)
+                failures.append(f"minor compatibility failed {example.relative_to(ROOT)} -> {target_path.relative_to(ROOT)}: {detail}")
 
-    actual_invalid = {str(path.relative_to(INVALID)) for path in json_files(INVALID)}
-    if actual_invalid != set(EXPECTED_INVALID):
-        failures.append("invalid example inventory differs from EXPECTED_INVALID declarations")
+    invalid_manifest = loaded.get(INVALID_MANIFEST, {})
+    declarations = invalid_manifest.get("fixtures", []) if isinstance(invalid_manifest, dict) else []
+    declared = {entry.get("fixture"): entry for entry in declarations if isinstance(entry, dict)}
+    actual = {str(path.relative_to(INVALID)) for path in invalid_paths}
+    if actual != set(declared):
+        failures.append("invalid example inventory differs from examples/invalid/manifest.json")
 
-    for example in json_files(INVALID):
+    for example in invalid_paths:
         relative = str(example.relative_to(INVALID))
+        declaration = declared.get(relative, {})
         schema_path = schema_for_example(example, INVALID, loaded.get(example))
         if schema_path not in loaded:
             failures.append(f"missing schema for invalid example {example.relative_to(ROOT)}")
             continue
-        errors = errors_for(loaded[example], loaded[schema_path], registry)
-        semantic = semantic_errors(loaded[example], semantic_context)
-        if not errors and not semantic:
+        schema_errors = errors_for(loaded[example], loaded[schema_path], registry)
+        scenario_name = declaration.get("scenario")
+        context = scenario_contexts.get(scenario_name) if scenario_name else None
+        semantic = semantic_errors(loaded[example], context)
+        if context is not None:
+            semantic.extend(supersession_graph_errors(context))
+        if not schema_errors and not semantic:
             failures.append(f"invalid example unexpectedly passed {example.relative_to(ROOT)}")
             continue
-        expected_validator, expected_text = EXPECTED_INVALID[relative]
-        matched_schema = any(error.validator == expected_validator and expected_text in (error.message + "/" + "/".join(map(str, error.absolute_path))) for error in errors)
-        matched_semantic = expected_validator == "semantic" and expected_text in semantic
+        expected_type = declaration.get("expectedType")
+        expected_code = declaration.get("expectedCode")
+        matched_schema = any(
+            error.validator == expected_type
+            and expected_code in (error.message + "/" + "/".join(map(str, error.absolute_path)))
+            for error in schema_errors
+        )
+        matched_semantic = expected_type == "semantic" and expected_code in semantic
         if not matched_schema and not matched_semantic:
-            rendered_schema = "; ".join(f"{error.validator}: {error.message}" for error in errors)
-            rendered_semantic = ", ".join(semantic)
-            rendered = "; ".join(part for part in (rendered_schema, rendered_semantic) if part)
-            failures.append(f"invalid example failed for the wrong reason {example.relative_to(ROOT)}: {rendered}")
+            rendered = "; ".join(
+                part for part in (
+                    "; ".join(f"{error.validator}: {error.message}" for error in schema_errors),
+                    ", ".join(semantic),
+                ) if part
+            )
+            failures.append(f"invalid example failed for wrong reason {example.relative_to(ROOT)}: {rendered}")
 
     if failures:
         print("Contract validation failed:")
         for failure in failures:
             print(f"- {failure}")
         return 1
-
     print(
         f"Validated {len(schema_paths)} schemas, {len(valid_paths)} valid examples, "
-        f"{len(json_files(INVALID))} intentional invalid examples, and {compatibility_checks} minor compatibility checks."
+        f"{len(invalid_paths)} intentional invalid examples, {len(scenarios)} scenarios, "
+        f"and {compatibility_checks} fixture-backed compatibility checks."
     )
     return 0
 

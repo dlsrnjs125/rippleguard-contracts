@@ -1,0 +1,16 @@
+{
+  "validate": true,
+  "fixtures": [
+    "examples/valid/domain/evaluation-run--blocked.json",
+    "examples/valid/domain/evaluation-run--completed.json",
+    "examples/valid/domain/evaluation-run.json",
+    "examples/valid/events/v1.0.0/loan.application.submitted.v1.json",
+    "examples/valid/events/v1.0.0/governance.review.started.v1.json",
+    "examples/valid/events/v1.0.0/governance.evidence.requested.v1.json",
+    "examples/valid/events/v1.0.0/loan.evidence.updated.v1.json",
+    "examples/valid/events/v1.0.0/agent.evaluation.requested.v1.json",
+    "examples/valid/events/v1.0.0/agent.evaluation.completed.v1.json",
+    "examples/valid/events/v1.0.0/loan.decision.commanded.v1.json",
+    "examples/valid/events/v1.0.0/loan.decision.finalized.v1.json"
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "validate": true,
+  "fixtures": [
+    "examples/valid/domain/evaluation-run--completed.json",
+    "examples/valid/agent-output/decision-envelope--reject.json"
+  ]
+}
