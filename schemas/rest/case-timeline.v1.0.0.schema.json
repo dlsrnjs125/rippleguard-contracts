@@ -29,7 +29,14 @@
       }
     },
     "traceCompleteness": { "type": "string", "enum": ["COMPLETE", "PARTIAL", "UNKNOWN"] },
-    "warnings": { "type": "array", "items": { "type": "string", "minLength": 1 }, "uniqueItems": true }
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": ["EVENT_GAP_DETECTED", "RETENTION_LIMIT", "LATE_EVENT_PENDING", "INVALID_REFERENCE"]
+      },
+      "uniqueItems": true
+    }
   },
   "required": ["schemaVersion", "caseId", "applicationId", "events", "traceCompleteness", "warnings"],
   "additionalProperties": false

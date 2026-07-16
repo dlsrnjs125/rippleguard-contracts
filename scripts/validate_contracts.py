@@ -120,6 +120,8 @@ def property_consts(value: Any, property_name: str) -> set[Any]:
 def schema_for_example(example: Path, example_root: Path, instance: Any) -> Path:
     relative = example.relative_to(example_root)
     contract_name = relative.name.split("--", 1)[0] if "--" in relative.name else relative.stem
+    if contract_name == "phase-1-loan-decision-command-profile":
+        return SCHEMAS / "commands" / "phase-1-loan-decision-command-profile.v1.0.0.schema.json"
     if len(relative.parts) >= 3 and relative.parts[0] == "events" and VERSION_DIR.fullmatch(relative.parts[1]):
         version = relative.parts[1]
         major = version.split(".", 1)[0]
@@ -607,7 +609,7 @@ def main() -> int:
 
     valid_schema_paths: dict[Path, Path] = {}
     phase1_profile_path = SCHEMAS / "common" / "phase-1-event-envelope-profile.schema.json"
-    command_profile_path = SCHEMAS / "commands" / "phase-1-loan-decision-command-profile.schema.json"
+    command_profile_path = SCHEMAS / "commands" / "phase-1-loan-decision-command-profile.v1.0.0.schema.json"
     for example in valid_paths:
         schema_path = schema_for_example(example, VALID, loaded.get(example))
         valid_schema_paths[example] = schema_path
@@ -617,8 +619,6 @@ def main() -> int:
         errors = errors_for(loaded[example], loaded[schema_path], registry)
         if example.relative_to(VALID).parts[0] == "events":
             errors.extend(errors_for(loaded[example], loaded[phase1_profile_path], registry))
-            if loaded[example].get("eventType") == "loan.decision.commanded.v1":
-                errors.extend(errors_for(loaded[example].get("payload"), loaded[command_profile_path], registry))
         if schema_path.parent == SCHEMAS / "commands":
             errors.extend(errors_for(loaded[example], loaded[command_profile_path], registry))
         semantic = semantic_errors(loaded[example])

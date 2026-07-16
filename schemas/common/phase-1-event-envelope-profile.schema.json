@@ -6,7 +6,7 @@
   "allOf": [
     { "$ref": "event-envelope.schema.json" },
     {
-      "properties": { "applicationId": { "type": "string", "minLength": 1 } },
+      "properties": { "applicationId": { "type": ["string", "null"], "format": "uuid" } },
       "required": ["applicationId", "evaluationRunId"]
     },
     {
@@ -24,7 +24,12 @@
         },
         "required": ["eventType"]
       },
-      "then": { "properties": { "evaluationRunId": { "type": "string", "format": "uuid" } } }
+      "then": {
+        "properties": {
+          "applicationId": { "type": "string", "format": "uuid" },
+          "evaluationRunId": { "type": "string", "format": "uuid" }
+        }
+      }
     }
   ]
 }

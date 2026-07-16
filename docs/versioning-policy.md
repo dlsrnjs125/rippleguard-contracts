@@ -6,7 +6,9 @@ Each published Event Schema has a full SemVer filename, such as `loan.applicatio
 
 Independent object contracts are also full-version files and carry their own `schemaVersion`, for example `decision-envelope.v1.0.0.schema.json`, `evaluation-run.v1.0.0.schema.json`, and `external-risk-signal.v1.0.0.schema.json`. Event `$ref` values always target an immutable full version rather than an unversioned moving file.
 
-Domain payload components embedded in a versioned Event, such as `loan-decision-command.v1.0.0.schema.json`, do not duplicate `schemaVersion` inside the payload. Their exact version is selected by the immutable Event `$ref`. A Phase-specific profile may require compatible optional fields without narrowing the published base Schema; Command `idempotencyKey` covers business application while Event `eventId` covers transport deduplication.
+Domain payload components embedded in a versioned Event, such as `loan-decision-command.v1.0.0.schema.json`, do not duplicate `schemaVersion` inside the payload. Their exact version is selected by the immutable Event `$ref`. For Phase 1, `loan.decision.commanded.v1.0.0.schema.json` references `phase-1-loan-decision-command-profile.v1.0.0.schema.json` directly, making the executable Kafka payload stricter than the reusable base Command object. Command `idempotencyKey` covers business application while Event `eventId` covers transport deduplication.
+
+Loan Decision Command is not an independent transfer object in Phase 1. It is always embedded in a versioned Event payload or another versioned API Schema. If a standalone Command API is introduced later, its wrapper must carry an explicit version.
 
 Scalar leaf contracts such as Loan Application Status, Decision Case Status, and Assurance Result use full-version filenames and `$id` values but remain scalar JSON values without an embedded `schemaVersion`; the consumer selects their immutable Schema version explicitly.
 

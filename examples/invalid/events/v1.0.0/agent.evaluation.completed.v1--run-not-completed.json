@@ -5,7 +5,7 @@
   "occurredAt": "2026-01-15T09:06:01+09:00",
   "producer": "governance-service",
   "caseId": "case-1001",
-  "correlationId": "loan-1001",
+  "correlationId": "10000000-0000-4000-8000-000000000001",
   "causationId": "10000000-0000-4000-8000-000000000005",
   "payload": {
     "evaluationRunId": "30000000-0000-4000-8000-000000000003",
@@ -23,7 +23,7 @@
       "proposal": "REQUEST_MORE_EVIDENCE",
       "status": "PROPOSED",
       "confidence": 0.5,
-      "usedEvidenceRefs": ["snapshot://loan-1001/blocked-v1"],
+      "usedEvidenceRefs": ["snapshot://10000000-0000-4000-8000-000000000001/blocked-v1"],
       "generatorRef": {
         "agentName": "loan-decision-agent",
         "agentVersion": "mock-v1",

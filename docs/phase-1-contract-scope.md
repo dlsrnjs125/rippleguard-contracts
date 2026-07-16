@@ -15,7 +15,7 @@ Phase 1 uses OpenAPI and JSON Schema as its language-neutral source of truth. Th
 | Assurance Result (Mock reused) | deterministic Governance assurance step | Governance command routing | `1.0.0` reused |
 | Loan Decision Command payload + Phase 1 Profile | Governance Service | `loan.decision.commanded.v1`, Loan Service | `1.0.0` single source |
 
-The base Event envelope remains compatible with Phase 0. Phase 1 producers and consumers additionally validate every Event against `phase-1-event-envelope-profile.schema.json`, which requires explicit `applicationId` and `evaluationRunId` presence. Run-scoped Events require a UUID while pre-evaluation Events use null. This executable profile avoids silently breaking already-published Event `v1` payloads.
+The base Event envelope remains compatible with Phase 0 and still accepts legacy human-readable application identifiers. Phase 1 producers and consumers additionally validate every Event against `phase-1-event-envelope-profile.schema.json`, which requires explicit `applicationId` and `evaluationRunId` presence. The profile constrains `applicationId` to UUID or null, and run-scoped Events require both `applicationId` and `evaluationRunId` as UUIDs. This executable profile avoids silently breaking already-published Event `v1` payloads while keeping REST, Event, Command, and Timeline identifiers aligned for Phase 1.
 
 Evidence supplementation is a supported Phase 1 route. `governance.evidence.requested.v1` and `loan.evidence.updated.v1` remain executable and the evidence-reassessment scenario is mandatory validation coverage. A direct approval or rejection happy path does not manufacture an evidence request when no evidence is missing.
 
@@ -23,11 +23,13 @@ Evidence supplementation is a supported Phase 1 route. `governance.evidence.requ
 
 The deterministic mock evaluator emits the existing Decision Envelope with `evaluatorId: mock-evaluator`, `PROPOSE_*`, and deterministic generator versions. `agent.evaluation.completed.v1` carries that Envelope. Governance evaluates the existing Assurance Result and only then creates the shared Loan Decision Command payload. Scenarios validate the complete Decision-to-Command references and proposal mapping; no parallel Mock result model or implementation-defined adapter exists.
 
-The Command payload allows only `APPROVE` and `REJECT`. Evidence supplementation exclusively uses `governance.evidence.requested.v1`; conditional approval is deferred until an executable condition contract exists. The Phase 1 Command Profile requires `reasonCodes`, `issuedAt`, and the business `idempotencyKey`; Loan Service also uses Event `eventId` for transport-delivery deduplication. `REJECT` is a lending outcome, not a Governance `BLOCKED` status.
+The Command payload allows only `APPROVE` and `REJECT`. Evidence supplementation exclusively uses `governance.evidence.requested.v1`; conditional approval is deferred until an executable condition contract exists. `loan.decision.commanded.v1` references `phase-1-loan-decision-command-profile.v1.0.0.schema.json` directly, so Event Schema validation requires `reasonCodes`, `issuedAt`, and the business `idempotencyKey` without relying on a hidden secondary validator rule. Loan Service also uses Event `eventId` for transport-delivery deduplication. `REJECT` is a lending outcome, not a Governance `BLOCKED` status.
+
+The minimal Case Timeline uses `traceCompleteness` values `COMPLETE`, `PARTIAL`, and `UNKNOWN`. When a trace is incomplete or contains an invalid reference, `warnings` uses the Phase 1 reason codes `EVENT_GAP_DETECTED`, `RETENTION_LIMIT`, `LATE_EVENT_PENDING`, and `INVALID_REFERENCE`. Phase 1 correlation is intentionally application-scoped: every Timeline event uses `correlationId == applicationId`; sub-execution identity is represented by `evaluationRunId` and `causationId`. Changing that correlation policy requires a new Event major or ADR.
 
 ## Compatibility
 
-Phase 0 Event major names and accepted `1.0.0` payloads are retained. The Event Command now references one domain Command Schema and Phase 1 applies one additional required-field Profile to it. REST, Command, Timeline, and profiles begin at `1.0.0`. Exact Decimal String money replaces binary floating-point amounts before service implementation. Completion-time lifecycle rules intentionally use Evaluation Run `2.0.0` because enforcing them would break `1.x` compatibility.
+Phase 0 Event major names and accepted `1.0.0` payloads are retained. The Event Command now references the Phase 1 Command Profile directly; the base Command Schema remains a reusable minimum domain object, not the executable Kafka contract. REST, Command, Timeline, and profiles begin at `1.0.0`. Exact Decimal String money replaces binary floating-point amounts before service implementation. Completion-time lifecycle rules intentionally use Evaluation Run `2.0.0` because enforcing them would break `1.x` compatibility.
 
 ## Deferred
 

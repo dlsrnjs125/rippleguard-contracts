@@ -4,9 +4,9 @@
   "schemaVersion": "1.0.0",
   "occurredAt": "2026-01-15T09:00:00+09:00",
   "producer": "loan-service",
-  "caseId": "loan-1001",
+  "caseId": "10000000-0000-4000-8000-000000000001",
   "evaluationRunId": null,
-  "correlationId": "loan-1001",
+  "correlationId": "10000000-0000-4000-8000-000000000001",
   "causationId": null,
   "payload": {}
 }

@@ -23,6 +23,7 @@
     { "fixture": "events/v1.0.0/loan.decision.commanded.v1--command-from-more-evidence-proposal.json", "expectedType": "semantic", "expectedCode": "COMMAND_NOT_ALLOWED_FOR_PROPOSAL", "scenario": "proposal-more-evidence" },
     { "fixture": "events/v1.0.0/loan.decision.commanded.v1--command-from-conditional-proposal.json", "expectedType": "semantic", "expectedCode": "COMMAND_NOT_ALLOWED_FOR_PROPOSAL", "scenario": "proposal-conditional" },
     { "fixture": "events/v1.0.0/loan.decision.commanded.v1--wrong-producer.json", "expectedType": "const", "expectedCode": "producer" },
+    { "fixture": "events/v1.0.0/loan.decision.commanded.v1--missing-idempotency-key.json", "expectedType": "required", "expectedCode": "idempotencyKey" },
     { "fixture": "events/v1.0.0/loan.decision.finalized.v1--mismatched-command-reference.json", "expectedType": "semantic", "expectedCode": "FINALIZED_COMMAND_REFERENCE_MISMATCH", "scenario": "phase1-evidence-reassessment" },
     { "fixture": "events/v1.0.0/loan.decision.finalized.v1--unknown-command.json", "expectedType": "semantic", "expectedCode": "FINALIZED_COMMAND_NOT_FOUND", "scenario": "phase1-evidence-reassessment" },
     { "fixture": "domain/v1.0.0/loan-application-status--bad-enum.json", "expectedType": "enum", "expectedCode": "PENDING" },

@@ -15,5 +15,5 @@
     "summary": "Causation reference is malformed"
   }],
   "traceCompleteness": "PARTIAL",
-  "warnings": ["CAUSATION_REFERENCE_NOT_FOUND"]
+  "warnings": ["INVALID_REFERENCE"]
 }

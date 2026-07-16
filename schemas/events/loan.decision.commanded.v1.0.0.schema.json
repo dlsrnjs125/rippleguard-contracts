@@ -11,7 +11,7 @@
         "eventType": { "const": "loan.decision.commanded.v1" },
         "schemaVersion": { "const": "1.0.0" },
         "causationId": { "type": "string", "format": "uuid" },
-        "payload": { "$ref": "../commands/loan-decision-command.v1.0.0.schema.json" }
+        "payload": { "$ref": "../commands/phase-1-loan-decision-command-profile.v1.0.0.schema.json" }
       }
     }
   ],
