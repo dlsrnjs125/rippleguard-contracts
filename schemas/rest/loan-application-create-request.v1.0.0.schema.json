@@ -7,7 +7,7 @@
   "properties": {
     "schemaVersion": { "const": "1.0.0" },
     "applicantReference": { "type": "string", "pattern": "^(synthetic|masked):[A-Za-z0-9._-]+$" },
-    "requestedAmount": { "type": "number", "exclusiveMinimum": 0 },
+    "requestedAmount": { "$ref": "#/$defs/positiveMoney" },
     "currency": { "type": "string", "pattern": "^[A-Z]{3}$" },
     "incomeHistory": {
       "type": "array",
@@ -16,7 +16,7 @@
         "type": "object",
         "properties": {
           "period": { "type": "string", "pattern": "^[0-9]{4}-(0[1-9]|1[0-2])$" },
-          "amount": { "type": "number", "minimum": 0 },
+          "amount": { "$ref": "#/$defs/money" },
           "sourceReference": { "type": "string", "pattern": "^(synthetic|masked):[A-Za-z0-9._-]+$" }
         },
         "required": ["period", "amount", "sourceReference"],
@@ -26,8 +26,8 @@
     "debtSummary": {
       "type": "object",
       "properties": {
-        "totalOutstandingAmount": { "type": "number", "minimum": 0 },
-        "monthlyPaymentAmount": { "type": "number", "minimum": 0 },
+        "totalOutstandingAmount": { "$ref": "#/$defs/money" },
+        "monthlyPaymentAmount": { "$ref": "#/$defs/money" },
         "sourceReferences": { "$ref": "#/$defs/references" }
       },
       "required": ["totalOutstandingAmount", "monthlyPaymentAmount", "sourceReferences"],
@@ -47,7 +47,7 @@
       "type": "object",
       "properties": {
         "period": { "type": "string", "minLength": 1 },
-        "grossSettlementAmount": { "type": "number", "minimum": 0 },
+        "grossSettlementAmount": { "$ref": "#/$defs/money" },
         "sourceReferences": { "$ref": "#/$defs/references" }
       },
       "required": ["period", "grossSettlementAmount", "sourceReferences"],
@@ -57,6 +57,15 @@
     "idempotencyKey": { "type": "string", "minLength": 8, "maxLength": 128 }
   },
   "$defs": {
+    "money": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]*)(\\.[0-9]{1,2})?$",
+      "description": "Exact decimal amount with at most two fractional digits; never a binary floating-point JSON number."
+    },
+    "positiveMoney": {
+      "type": "string",
+      "pattern": "^(?=.*[1-9])(0|[1-9][0-9]*)(\\.[0-9]{1,2})?$"
+    },
     "references": {
       "type": "array",
       "minItems": 1,

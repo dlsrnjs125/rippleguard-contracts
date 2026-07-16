@@ -10,21 +10,21 @@ RippleGuard 서비스와 Agent 사이의 실행 가능한 JSON Schema 계약 원
 - `schemas/domain`: 상태와 Full SemVer Evaluation Run
 - `schemas/agent-output`: Full SemVer Decision Envelope와 최소 Assurance 결과
 - `schemas/rest`, `openapi`: Loan Application과 최소 Case Timeline REST 계약
-- `schemas/mock`, `schemas/commands`: Phase 1 deterministic Mock 결과와 Loan Decision Command
+- `schemas/agent-output`, `schemas/commands`: Mock이 재사용하는 Decision Envelope와 단일 Loan Decision Command payload
 - `examples/valid`, `examples/invalid`: 성공·실패 검증 fixture
 - `examples/scenarios/valid`, `examples/scenarios/invalid`: 경로별 causation과 cross-reference를 검증하는 격리된 Scenario context
 - `docs`: 범위와 버전·호환성 정책
 
 ## 검증
 
-Python 3와 `jsonschema` 패키지가 필요합니다.
+Python 3와 개발 의존성이 필요합니다.
 
 ```bash
 python -m pip install -r requirements-dev.txt
 make validate
 ```
 
-검증 명령은 JSON 문법, JSON Schema와 OpenAPI 3.1 구조, 상대 `$ref`, 중복 `$id`, Event Envelope 필드, 파일명·버전, Scenario가 선언한 causation edge와 cross-reference, cross-field 의미 제약, versioned 계약의 fixture-backed minor 호환성, valid fixture 성공과 invalid fixture·Scenario 실패를 확인합니다.
+검증 명령은 공식 OpenAPI 3.1 문법, JSON 문법, JSON Schema, 상대 `$ref`, 중복 `$id`, Phase 1 Event Envelope Profile, 파일명·버전, Timeline 정렬·인과관계, Scenario cross-reference, cross-field 의미 제약, minor 호환성, valid fixture 성공과 invalid fixture·Scenario 실패를 확인합니다.
 
 ## 버전 원칙
 

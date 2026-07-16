@@ -211,12 +211,76 @@ def semantic_errors(instance: Any, context: dict[str, Any] | None = None) -> lis
     event_type = instance.get("eventType")
     payload = instance.get("payload", {})
 
+    if "applicantReference" in instance and isinstance(instance.get("incomeHistory"), list):
+        periods = [item.get("period") for item in instance["incomeHistory"] if isinstance(item, dict)]
+        if len(periods) != len(set(periods)):
+            failures.append("LOAN_APPLICATION_DUPLICATE_INCOME_PERIOD")
+
+    if {"applicationId", "status", "createdAt", "updatedAt"}.issubset(instance):
+        try:
+            if parse_timestamp(instance["updatedAt"]) < parse_timestamp(instance["createdAt"]):
+                failures.append("LOAN_APPLICATION_UPDATED_BEFORE_CREATED")
+        except (TypeError, ValueError):
+            pass
+
+    if instance.get("schemaVersion") == "2.0.0" and instance.get("componentVersions"):
+        terminal = instance.get("status") in {"COMPLETED", "BLOCKED", "FAILED", "CANCELLED"}
+        completed_at = instance.get("completedAt")
+        if terminal and not completed_at:
+            failures.append("EVALUATION_TERMINAL_WITHOUT_COMPLETED_AT")
+        if not terminal and completed_at is not None:
+            failures.append("EVALUATION_NON_TERMINAL_WITH_COMPLETED_AT")
+        if completed_at:
+            try:
+                if parse_timestamp(completed_at) < parse_timestamp(instance["createdAt"]):
+                    failures.append("EVALUATION_COMPLETED_BEFORE_CREATED")
+            except (KeyError, TypeError, ValueError):
+                pass
+
+    if isinstance(instance.get("events"), list) and "traceCompleteness" in instance:
+        timeline_events = instance["events"]
+        identifiers = [item.get("eventId") for item in timeline_events if isinstance(item, dict)]
+        if len(identifiers) != len(set(identifiers)):
+            failures.append("TIMELINE_DUPLICATE_EVENT_ID")
+        positions = {event_id: index for index, event_id in enumerate(identifiers) if event_id}
+        previous_time: datetime | None = None
+        for index, item in enumerate(timeline_events):
+            if not isinstance(item, dict):
+                continue
+            try:
+                occurred_at = parse_timestamp(item["occurredAt"])
+                if previous_time is not None and occurred_at < previous_time:
+                    failures.append("TIMELINE_TIME_ORDER_INVALID")
+                previous_time = occurred_at
+            except (KeyError, TypeError, ValueError):
+                pass
+            cause = item.get("causationId")
+            if cause is not None:
+                if cause not in positions:
+                    failures.append("TIMELINE_CAUSATION_NOT_FOUND")
+                elif positions[cause] >= index:
+                    failures.append("TIMELINE_CAUSATION_NOT_PRECEDING")
+            if item.get("correlationId") != instance.get("applicationId"):
+                failures.append("TIMELINE_CORRELATION_MISMATCH")
+            if item.get("caseId") != instance.get("caseId"):
+                failures.append("TIMELINE_CASE_MISMATCH")
+        if instance.get("traceCompleteness") == "COMPLETE" and any(
+            item.get("status") == "INVALID_REFERENCE" for item in timeline_events if isinstance(item, dict)
+        ):
+            failures.append("TIMELINE_COMPLETE_WITH_INVALID_EVENT")
+        if instance.get("traceCompleteness") in {"PARTIAL", "UNKNOWN"} and not instance.get("warnings"):
+            failures.append("TIMELINE_PARTIAL_WITHOUT_WARNING")
+
     if event_type == "loan.application.submitted.v1" and instance.get("caseId") != payload.get("applicationId"):
         failures.append("EVENT_CASE_APPLICATION_MISMATCH")
     if event_type and payload.get("decisionCaseId") and instance.get("caseId") != payload.get("decisionCaseId"):
         failures.append("EVENT_CASE_DECISION_MISMATCH")
     if event_type and payload.get("applicationId") and instance.get("correlationId") != payload.get("applicationId"):
         failures.append("EVENT_APPLICATION_CORRELATION_MISMATCH")
+    if event_type and payload.get("applicationId") and instance.get("applicationId") is not None and instance.get("applicationId") != payload.get("applicationId"):
+        failures.append("EVENT_ENVELOPE_APPLICATION_MISMATCH")
+    if event_type and payload.get("evaluationRunId") and instance.get("evaluationRunId") is not None and instance.get("evaluationRunId") != payload.get("evaluationRunId"):
+        failures.append("EVENT_ENVELOPE_EVALUATION_RUN_MISMATCH")
 
     if event_type == "agent.evaluation.completed.v1":
         decision = payload.get("decisionEnvelope", {})
@@ -408,7 +472,7 @@ def validate_schema_identity(path: Path, schema: dict[str, Any]) -> list[str]:
             failures.append(f"eventType does not match filename: {path.relative_to(ROOT)}")
         if property_consts(schema, "schemaVersion") != {version_text}:
             failures.append(f"schemaVersion does not match filename: {path.relative_to(ROOT)}")
-    elif schema.get("type") == "object" and property_consts(schema, "schemaVersion") != {version_text}:
+    elif path.parent != SCHEMAS / "commands" and schema.get("type") == "object" and property_consts(schema, "schemaVersion") != {version_text}:
         failures.append(f"schemaVersion does not match filename: {path.relative_to(ROOT)}")
     return failures
 
@@ -542,6 +606,8 @@ def main() -> int:
                 failures.append(f"unresolved $ref in {path.relative_to(ROOT)}: {reference}")
 
     valid_schema_paths: dict[Path, Path] = {}
+    phase1_profile_path = SCHEMAS / "common" / "phase-1-event-envelope-profile.schema.json"
+    command_profile_path = SCHEMAS / "commands" / "phase-1-loan-decision-command-profile.schema.json"
     for example in valid_paths:
         schema_path = schema_for_example(example, VALID, loaded.get(example))
         valid_schema_paths[example] = schema_path
@@ -549,6 +615,12 @@ def main() -> int:
             failures.append(f"missing schema for valid example {example.relative_to(ROOT)}")
             continue
         errors = errors_for(loaded[example], loaded[schema_path], registry)
+        if example.relative_to(VALID).parts[0] == "events":
+            errors.extend(errors_for(loaded[example], loaded[phase1_profile_path], registry))
+            if loaded[example].get("eventType") == "loan.decision.commanded.v1":
+                errors.extend(errors_for(loaded[example].get("payload"), loaded[command_profile_path], registry))
+        if schema_path.parent == SCHEMAS / "commands":
+            errors.extend(errors_for(loaded[example], loaded[command_profile_path], registry))
         semantic = semantic_errors(loaded[example])
         if errors or semantic:
             detail = errors[0].message if errors else ", ".join(semantic)

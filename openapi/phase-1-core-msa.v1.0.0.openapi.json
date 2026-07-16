@@ -28,6 +28,9 @@
               }
             }
           },
+          "400": { "$ref": "#/components/responses/ValidationError" },
+          "422": { "$ref": "#/components/responses/SemanticValidationError" },
+          "503": { "$ref": "#/components/responses/DependencyUnavailable" },
           "409": { "$ref": "#/components/responses/IdempotencyConflict" }
         }
       }
@@ -102,6 +105,18 @@
       },
       "IdempotencyConflict": {
         "description": "The idempotency key was reused with a different request",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "ValidationError": {
+        "description": "Request does not satisfy the JSON Schema contract",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "SemanticValidationError": {
+        "description": "Request is structurally valid but violates a deterministic business invariant",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "DependencyUnavailable": {
+        "description": "A required Phase 1 dependency is temporarily unavailable",
         "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
       }
     }

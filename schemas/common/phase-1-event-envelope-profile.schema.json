@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.rippleguard.dev/common/phase-1-event-envelope-profile.schema.json",
+  "title": "Phase 1 Event Envelope Profile",
+  "description": "Executable profile applied with each legacy-compatible v1 Event Schema. It requires applicationId and evaluationRunId presence without breaking the Phase 0 base envelope.",
+  "allOf": [
+    { "$ref": "event-envelope.schema.json" },
+    {
+      "properties": { "applicationId": { "type": "string", "minLength": 1 } },
+      "required": ["applicationId", "evaluationRunId"]
+    },
+    {
+      "if": {
+        "properties": {
+          "eventType": {
+            "enum": [
+              "governance.evidence.requested.v1",
+              "agent.evaluation.requested.v1",
+              "agent.evaluation.completed.v1",
+              "loan.decision.commanded.v1",
+              "loan.decision.finalized.v1"
+            ]
+          }
+        },
+        "required": ["eventType"]
+      },
+      "then": { "properties": { "evaluationRunId": { "type": "string", "format": "uuid" } } }
+    }
+  ]
+}

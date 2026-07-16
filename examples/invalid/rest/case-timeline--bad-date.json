@@ -5,6 +5,7 @@
   "events": [{
     "eventId": "20000000-0000-4000-8000-000000000001",
     "eventType": "loan.application.submitted.v1",
+    "caseId": "case-001",
     "occurredAt": "2026-07-16",
     "producer": "loan-service",
     "evaluationRunId": null,
