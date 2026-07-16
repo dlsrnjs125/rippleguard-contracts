@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.rippleguard.dev/commands/phase-1-loan-decision-command-profile.v1.0.0.schema.json",
+  "title": "Phase 1 Loan Decision Command Profile v1.0.0",
+  "description": "Executable Phase 1 command payload for loan.decision.commanded.v1. It requires reason, issue time, and business idempotency identity.",
+  "allOf": [
+    { "$ref": "loan-decision-command.v1.0.0.schema.json" },
+    { "required": ["reasonCodes", "issuedAt", "idempotencyKey"] }
+  ]
+}

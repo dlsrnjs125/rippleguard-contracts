@@ -22,6 +22,7 @@ except ImportError:
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMAS = ROOT / "schemas"
+OPENAPI = ROOT / "openapi"
 VALID = ROOT / "examples" / "valid"
 INVALID = ROOT / "examples" / "invalid"
 SCENARIOS = ROOT / "examples" / "scenarios"
@@ -30,6 +31,11 @@ VERSIONED_SCHEMA_NAME = re.compile(
     r"^(?P<base>.+)\.v(?P<major>[1-9][0-9]*)\.(?P<minor>[0-9]+)\.(?P<patch>[0-9]+)\.schema\.json$"
 )
 VERSION_DIR = re.compile(r"v[1-9][0-9]*\.[0-9]+\.[0-9]+")
+OPENAPI_NAME = re.compile(r"^.+\.v(?P<version>[1-9][0-9]*\.[0-9]+\.[0-9]+)\.openapi\.json$")
+EVENT_ENVELOPE_FIELDS = {
+    "eventId", "eventType", "schemaVersion", "occurredAt", "producer",
+    "applicationId", "caseId", "evaluationRunId", "correlationId", "causationId", "payload",
+}
 
 
 def json_files(directory: Path) -> list[Path]:
@@ -55,6 +61,48 @@ def nested_refs(value: Any) -> Iterator[str]:
             yield from nested_refs(child)
 
 
+def validate_openapi(path: Path, document: Any, loaded: dict[Path, Any]) -> list[str]:
+    failures: list[str] = []
+    relative = path.relative_to(ROOT)
+    name_match = OPENAPI_NAME.fullmatch(path.name)
+    if not name_match:
+        failures.append(f"OpenAPI filename must include full version: {relative}")
+    if not isinstance(document, dict) or not str(document.get("openapi", "")).startswith("3.1."):
+        return failures + [f"OpenAPI 3.1 document required: {relative}"]
+    if not isinstance(document.get("info"), dict) or not document["info"].get("title") or not document["info"].get("version"):
+        failures.append(f"OpenAPI info.title and info.version required: {relative}")
+    elif name_match and document["info"]["version"] != name_match.group("version"):
+        failures.append(f"OpenAPI info.version does not match filename: {relative}")
+    paths = document.get("paths")
+    if not isinstance(paths, dict):
+        return failures + [f"OpenAPI paths object required: {relative}"]
+    required_operations = {
+        ("/api/v1/loan-applications", "post"),
+        ("/api/v1/loan-applications/{applicationId}", "get"),
+        ("/api/v1/cases/{caseId}/timeline", "get"),
+    }
+    for endpoint, method in required_operations:
+        operation = paths.get(endpoint, {}).get(method)
+        if not isinstance(operation, dict):
+            failures.append(f"missing OpenAPI operation {method.upper()} {endpoint}")
+        elif not isinstance(operation.get("responses"), dict) or not operation["responses"]:
+            failures.append(f"OpenAPI operation has no responses: {method.upper()} {endpoint}")
+    for reference in nested_refs(document):
+        if reference.startswith("#"):
+            current: Any = document
+            try:
+                for token in reference[2:].split("/") if reference.startswith("#/") else []:
+                    current = current[token.replace("~1", "/").replace("~0", "~")]
+            except (KeyError, TypeError):
+                failures.append(f"unresolved OpenAPI local $ref {reference} in {relative}")
+            continue
+        target_text = reference.split("#", 1)[0]
+        target = (path.parent / target_text).resolve()
+        if target not in loaded:
+            failures.append(f"unresolved OpenAPI relative $ref {reference} in {relative}")
+    return failures
+
+
 def property_consts(value: Any, property_name: str) -> set[Any]:
     found: set[Any] = set()
     if isinstance(value, dict):
@@ -72,6 +120,10 @@ def property_consts(value: Any, property_name: str) -> set[Any]:
 def schema_for_example(example: Path, example_root: Path, instance: Any) -> Path:
     relative = example.relative_to(example_root)
     contract_name = relative.name.split("--", 1)[0] if "--" in relative.name else relative.stem
+    if contract_name == "phase-1-event-envelope-profile":
+        return SCHEMAS / "common" / "phase-1-event-envelope-profile.v1.0.0.schema.json"
+    if contract_name == "phase-1-loan-decision-command-profile":
+        return SCHEMAS / "commands" / "phase-1-loan-decision-command-profile.v1.0.0.schema.json"
     if len(relative.parts) >= 3 and relative.parts[0] == "events" and VERSION_DIR.fullmatch(relative.parts[1]):
         version = relative.parts[1]
         major = version.split(".", 1)[0]
@@ -163,12 +215,76 @@ def semantic_errors(instance: Any, context: dict[str, Any] | None = None) -> lis
     event_type = instance.get("eventType")
     payload = instance.get("payload", {})
 
+    if "applicantReference" in instance and isinstance(instance.get("incomeHistory"), list):
+        periods = [item.get("period") for item in instance["incomeHistory"] if isinstance(item, dict)]
+        if len(periods) != len(set(periods)):
+            failures.append("LOAN_APPLICATION_DUPLICATE_INCOME_PERIOD")
+
+    if {"applicationId", "status", "createdAt", "updatedAt"}.issubset(instance):
+        try:
+            if parse_timestamp(instance["updatedAt"]) < parse_timestamp(instance["createdAt"]):
+                failures.append("LOAN_APPLICATION_UPDATED_BEFORE_CREATED")
+        except (TypeError, ValueError):
+            pass
+
+    if instance.get("schemaVersion") == "2.0.0" and instance.get("componentVersions"):
+        terminal = instance.get("status") in {"COMPLETED", "BLOCKED", "FAILED", "CANCELLED"}
+        completed_at = instance.get("completedAt")
+        if terminal and not completed_at:
+            failures.append("EVALUATION_TERMINAL_WITHOUT_COMPLETED_AT")
+        if not terminal and completed_at is not None:
+            failures.append("EVALUATION_NON_TERMINAL_WITH_COMPLETED_AT")
+        if completed_at:
+            try:
+                if parse_timestamp(completed_at) < parse_timestamp(instance["createdAt"]):
+                    failures.append("EVALUATION_COMPLETED_BEFORE_CREATED")
+            except (KeyError, TypeError, ValueError):
+                pass
+
+    if isinstance(instance.get("events"), list) and "traceCompleteness" in instance:
+        timeline_events = instance["events"]
+        identifiers = [item.get("eventId") for item in timeline_events if isinstance(item, dict)]
+        if len(identifiers) != len(set(identifiers)):
+            failures.append("TIMELINE_DUPLICATE_EVENT_ID")
+        positions = {event_id: index for index, event_id in enumerate(identifiers) if event_id}
+        previous_time: datetime | None = None
+        for index, item in enumerate(timeline_events):
+            if not isinstance(item, dict):
+                continue
+            try:
+                occurred_at = parse_timestamp(item["occurredAt"])
+                if previous_time is not None and occurred_at < previous_time:
+                    failures.append("TIMELINE_TIME_ORDER_INVALID")
+                previous_time = occurred_at
+            except (KeyError, TypeError, ValueError):
+                pass
+            cause = item.get("causationId")
+            if cause is not None:
+                if cause not in positions:
+                    failures.append("TIMELINE_CAUSATION_NOT_FOUND")
+                elif positions[cause] >= index:
+                    failures.append("TIMELINE_CAUSATION_NOT_PRECEDING")
+            if item.get("correlationId") != instance.get("applicationId"):
+                failures.append("TIMELINE_CORRELATION_MISMATCH")
+            if item.get("caseId") != instance.get("caseId"):
+                failures.append("TIMELINE_CASE_MISMATCH")
+        if instance.get("traceCompleteness") == "COMPLETE" and any(
+            item.get("status") == "INVALID_REFERENCE" for item in timeline_events if isinstance(item, dict)
+        ):
+            failures.append("TIMELINE_COMPLETE_WITH_INVALID_EVENT")
+        if instance.get("traceCompleteness") in {"PARTIAL", "UNKNOWN"} and not instance.get("warnings"):
+            failures.append("TIMELINE_PARTIAL_WITHOUT_WARNING")
+
     if event_type == "loan.application.submitted.v1" and instance.get("caseId") != payload.get("applicationId"):
         failures.append("EVENT_CASE_APPLICATION_MISMATCH")
     if event_type and payload.get("decisionCaseId") and instance.get("caseId") != payload.get("decisionCaseId"):
         failures.append("EVENT_CASE_DECISION_MISMATCH")
     if event_type and payload.get("applicationId") and instance.get("correlationId") != payload.get("applicationId"):
         failures.append("EVENT_APPLICATION_CORRELATION_MISMATCH")
+    if event_type and payload.get("applicationId") and instance.get("applicationId") is not None and instance.get("applicationId") != payload.get("applicationId"):
+        failures.append("EVENT_ENVELOPE_APPLICATION_MISMATCH")
+    if event_type and payload.get("evaluationRunId") and instance.get("evaluationRunId") is not None and instance.get("evaluationRunId") != payload.get("evaluationRunId"):
+        failures.append("EVENT_ENVELOPE_EVALUATION_RUN_MISMATCH")
 
     if event_type == "agent.evaluation.completed.v1":
         decision = payload.get("decisionEnvelope", {})
@@ -360,7 +476,12 @@ def validate_schema_identity(path: Path, schema: dict[str, Any]) -> list[str]:
             failures.append(f"eventType does not match filename: {path.relative_to(ROOT)}")
         if property_consts(schema, "schemaVersion") != {version_text}:
             failures.append(f"schemaVersion does not match filename: {path.relative_to(ROOT)}")
-    elif schema.get("type") == "object" and property_consts(schema, "schemaVersion") != {version_text}:
+    elif (
+        path.parent != SCHEMAS / "commands"
+        and path.name != "phase-1-event-envelope-profile.v1.0.0.schema.json"
+        and schema.get("type") == "object"
+        and property_consts(schema, "schemaVersion") != {version_text}
+    ):
         failures.append(f"schemaVersion does not match filename: {path.relative_to(ROOT)}")
     return failures
 
@@ -437,7 +558,8 @@ def main() -> int:
     failures: list[str] = []
     invalid_paths = [path for path in json_files(INVALID) if path != INVALID_MANIFEST]
     valid_paths = json_files(VALID)
-    all_json = json_files(SCHEMAS) + valid_paths + invalid_paths + [INVALID_MANIFEST] + json_files(SCENARIOS)
+    openapi_paths = json_files(OPENAPI)
+    all_json = json_files(SCHEMAS) + openapi_paths + valid_paths + invalid_paths + [INVALID_MANIFEST] + json_files(SCENARIOS)
     loaded: dict[Path, Any] = {}
     for path in all_json:
         try:
@@ -452,6 +574,18 @@ def main() -> int:
         failures.append(f"duplicate schema $id values: {', '.join(duplicates)}")
     if any(not value for value in schema_ids):
         failures.append("every schema must define a non-empty $id")
+
+    envelope_path = SCHEMAS / "common" / "event-envelope.schema.json"
+    envelope = loaded.get(envelope_path, {})
+    envelope_properties = set(envelope.get("properties", {})) if isinstance(envelope, dict) else set()
+    if not EVENT_ENVELOPE_FIELDS.issubset(envelope_properties):
+        failures.append(
+            "event envelope is missing fields: "
+            + ", ".join(sorted(EVENT_ENVELOPE_FIELDS - envelope_properties))
+        )
+
+    for path in openapi_paths:
+        failures.extend(validate_openapi(path, loaded.get(path), loaded))
 
     registry = Registry()
     versioned_schemas: dict[str, list[tuple[tuple[int, int, int], Path, dict[str, Any]]]] = {}
@@ -481,6 +615,7 @@ def main() -> int:
                 failures.append(f"unresolved $ref in {path.relative_to(ROOT)}: {reference}")
 
     valid_schema_paths: dict[Path, Path] = {}
+    command_profile_path = SCHEMAS / "commands" / "phase-1-loan-decision-command-profile.v1.0.0.schema.json"
     for example in valid_paths:
         schema_path = schema_for_example(example, VALID, loaded.get(example))
         valid_schema_paths[example] = schema_path
@@ -488,6 +623,8 @@ def main() -> int:
             failures.append(f"missing schema for valid example {example.relative_to(ROOT)}")
             continue
         errors = errors_for(loaded[example], loaded[schema_path], registry)
+        if schema_path.parent == SCHEMAS / "commands":
+            errors.extend(errors_for(loaded[example], loaded[command_profile_path], registry))
         semantic = semantic_errors(loaded[example])
         if errors or semantic:
             detail = errors[0].message if errors else ", ".join(semantic)
@@ -585,7 +722,7 @@ def main() -> int:
             print(f"- {failure}")
         return 1
     print(
-        f"Validated {len(schema_paths)} schemas, {len(valid_paths)} valid examples, "
+        f"Validated {len(schema_paths)} schemas, {len(openapi_paths)} OpenAPI documents, {len(valid_paths)} valid examples, "
         f"{len(invalid_paths)} intentional invalid examples, {len(scenarios)} scenarios, "
         f"and {compatibility_checks} fixture-backed compatibility checks."
     )

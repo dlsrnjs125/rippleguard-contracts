@@ -1,0 +1,57 @@
+{
+  "schemaVersion": "1.0.0",
+  "caseId": "case-001",
+  "applicationId": "10000000-0000-4000-8000-000000000001",
+  "events": [
+    {
+      "eventId": "20000000-0000-4000-8000-000000000001",
+      "eventType": "loan.application.submitted.v1",
+      "caseId": "case-001",
+      "occurredAt": "2026-07-16T09:00:00+09:00",
+      "producer": "loan-service",
+      "evaluationRunId": null,
+      "correlationId": "10000000-0000-4000-8000-000000000001",
+      "causationId": null,
+      "status": "RECORDED",
+      "summary": "Loan application submitted"
+    },
+    {
+      "eventId": "20000000-0000-4000-8000-000000000002",
+      "eventType": "governance.review.started.v1",
+      "caseId": "case-001",
+      "occurredAt": "2026-07-16T09:00:10+09:00",
+      "producer": "governance-service",
+      "evaluationRunId": null,
+      "correlationId": "10000000-0000-4000-8000-000000000001",
+      "causationId": "20000000-0000-4000-8000-000000000001",
+      "status": "RECORDED",
+      "summary": "Governance review started"
+    },
+    {
+      "eventId": "20000000-0000-4000-8000-000000000003",
+      "eventType": "agent.evaluation.completed.v1",
+      "caseId": "case-001",
+      "occurredAt": "2026-07-16T09:01:00+09:00",
+      "producer": "governance-service",
+      "evaluationRunId": "40000000-0000-4000-8000-000000000001",
+      "correlationId": "10000000-0000-4000-8000-000000000001",
+      "causationId": "20000000-0000-4000-8000-000000000002",
+      "status": "RECORDED",
+      "summary": "Deterministic mock proposal completed"
+    },
+    {
+      "eventId": "20000000-0000-4000-8000-000000000004",
+      "eventType": "loan.decision.commanded.v1",
+      "caseId": "case-001",
+      "occurredAt": "2026-07-16T09:02:00+09:00",
+      "producer": "governance-service",
+      "evaluationRunId": "40000000-0000-4000-8000-000000000001",
+      "correlationId": "10000000-0000-4000-8000-000000000001",
+      "causationId": "20000000-0000-4000-8000-000000000003",
+      "status": "RECORDED",
+      "summary": "Verified loan decision commanded"
+    }
+  ],
+  "traceCompleteness": "COMPLETE",
+  "warnings": []
+}

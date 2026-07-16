@@ -1,0 +1,5 @@
+{
+  "schemaVersion": "1.0.0", "caseId": "case-001", "applicationId": "10000000-0000-4000-8000-000000000001",
+  "events": [{ "eventId": "20000000-0000-4000-8000-000000000001", "eventType": "loan.application.submitted.v1", "caseId": "case-001", "occurredAt": "2026-07-16T09:00:00+09:00", "producer": "loan-service", "evaluationRunId": null, "correlationId": "different-application", "causationId": null, "status": "RECORDED", "summary": "submitted" }],
+  "traceCompleteness": "COMPLETE", "warnings": []
+}

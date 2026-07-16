@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "1.0.0",
+  "applicantReference": "synthetic:applicant-001",
+  "requestedAmount": "25000000.00",
+  "currency": "KRW",
+  "incomeHistory": [{ "period": "2026-06", "amount": "5200000.00", "sourceReference": "masked:income-2026-06" }],
+  "debtSummary": { "totalOutstandingAmount": "4000000.00", "monthlyPaymentAmount": "350000.00", "sourceReferences": ["masked:debt-summary-001"] },
+  "delinquencySummary": { "delinquencyCount": 0, "daysPastDueMaximum": 0, "sourceReferences": ["masked:delinquency-001"] },
+  "platformSettlementSummary": { "period": "2026-Q2", "grossSettlementAmount": "18000000.00", "sourceReferences": ["synthetic:settlement-q2"] },
+  "riskSignalReferences": ["synthetic:risk-signal-001"],
+  "idempotencyKey": "loan-create-001"
+}

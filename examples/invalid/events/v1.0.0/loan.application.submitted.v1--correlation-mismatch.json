@@ -1,4 +1,4 @@
 {
-  "eventId": "10000000-0000-4000-8000-000000000065", "eventType": "loan.application.submitted.v1", "schemaVersion": "1.0.0", "occurredAt": "2026-01-15T09:00:00+09:00", "producer": "loan-service", "caseId": "loan-1001", "correlationId": "loan-other", "causationId": null,
-  "payload": { "applicationId": "loan-1001", "applicantId": "customer-42", "inputSnapshotVersion": "snapshot-v1", "submittedAt": "2026-01-15T09:00:00+09:00" }
+  "eventId": "10000000-0000-4000-8000-000000000065", "eventType": "loan.application.submitted.v1", "schemaVersion": "1.0.0", "occurredAt": "2026-01-15T09:00:00+09:00", "producer": "loan-service", "caseId": "10000000-0000-4000-8000-000000000001", "correlationId": "loan-other", "causationId": null,
+  "payload": { "applicationId": "10000000-0000-4000-8000-000000000001", "applicantId": "customer-42", "inputSnapshotVersion": "snapshot-v1", "submittedAt": "2026-01-15T09:00:00+09:00" }
 }

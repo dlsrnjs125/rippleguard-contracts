@@ -1,1 +1,2 @@
 jsonschema[format]==4.25.1
+openapi-spec-validator==0.7.2

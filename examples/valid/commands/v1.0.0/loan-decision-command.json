@@ -1,0 +1,13 @@
+{
+  "commandId": "50000000-0000-4000-8000-000000000001",
+  "decisionCaseId": "case-001",
+  "applicationId": "10000000-0000-4000-8000-000000000001",
+  "decisionId": "30000000-0000-4000-8000-000000000001",
+  "evaluationRunId": "40000000-0000-4000-8000-000000000001",
+  "evaluationRunStatus": "COMPLETED",
+  "finalDecision": "APPROVE",
+  "assuranceResult": "ASSURANCE_COMPLETE",
+  "reasonCodes": ["GOVERNANCE_VERIFIED_PROPOSAL"],
+  "issuedAt": "2026-07-16T09:03:00+09:00",
+  "idempotencyKey": "decision-command-case-001"
+}

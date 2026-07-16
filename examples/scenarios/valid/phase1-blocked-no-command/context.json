@@ -6,9 +6,9 @@
   ],
   "fixtures": [
     "examples/valid/domain/evaluation-run--blocked.json",
-    "examples/valid/events/v1.0.0/loan.application.submitted.v1.json",
-    "examples/valid/events/v1.0.0/governance.review.started.v1.json",
-    "examples/valid/events/v1.0.0/governance.evidence.requested.v1.json"
+    "examples/valid/events/v1.1.0/loan.application.submitted.v1.json",
+    "examples/valid/events/v1.1.0/governance.review.started.v1.json",
+    "examples/valid/events/v1.1.0/governance.evidence.requested.v1.json"
   ],
   "forbiddenEventTypes": ["loan.decision.commanded.v1", "loan.decision.finalized.v1"]
 }

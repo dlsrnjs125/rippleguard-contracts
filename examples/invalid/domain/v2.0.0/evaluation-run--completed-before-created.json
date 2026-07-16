@@ -1,0 +1,10 @@
+{
+  "schemaVersion": "2.0.0", "evaluationRunId": "40000000-0000-4000-8000-000000000013", "decisionCaseId": "case-001", "inputSnapshotVersion": "snapshot-v1", "executionPlanVersion": "phase1-plan-1.0.0",
+  "componentVersions": [
+    { "componentType": "MODEL", "componentName": "mock-model", "version": "1" },
+    { "componentType": "PROMPT", "componentName": "no-prompt", "version": "1" },
+    { "componentType": "TOOL", "componentName": "rule-engine", "version": "1" },
+    { "componentType": "AGENT", "componentName": "mock-evaluator", "version": "1" }
+  ],
+  "policyInputVersion": "phase1-no-opa", "policyBundleVersion": "phase1-no-opa", "status": "COMPLETED", "supersedesRunId": null, "createdAt": "2026-07-16T10:00:00+09:00", "completedAt": "2026-07-16T09:00:00+09:00"
+}

@@ -1,0 +1,13 @@
+{
+  "eventId": "10000000-0000-4000-8000-000000000003",
+  "eventType": "governance.evidence.requested.v1",
+  "schemaVersion": "1.1.0",
+  "occurredAt": "2026-01-15T09:01:00+09:00",
+  "producer": "governance-service",
+  "applicationId": "10000000-0000-4000-8000-000000000001",
+  "caseId": "case-1001",
+  "evaluationRunId": "30000000-0000-4000-8000-000000000003",
+  "correlationId": "10000000-0000-4000-8000-000000000001",
+  "causationId": "10000000-0000-4000-8000-000000000002",
+  "payload": { "requestId": "20000000-0000-4000-8000-000000000001", "decisionCaseId": "case-1001", "evaluationRunId": "30000000-0000-4000-8000-000000000003", "inputSnapshotVersion": "snapshot-blocked-v1", "applicationId": "10000000-0000-4000-8000-000000000001", "requestedEvidenceTypes": ["TRANSACTION_EXPLANATION"], "reasonCodes": ["UNCONFIRMED_TRANSACTION_ANOMALY"] }
+}
