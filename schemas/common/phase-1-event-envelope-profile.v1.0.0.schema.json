@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://schemas.rippleguard.dev/common/phase-1-event-envelope-profile.schema.json",
-  "title": "Phase 1 Event Envelope Profile",
+  "$id": "https://schemas.rippleguard.dev/common/phase-1-event-envelope-profile.v1.0.0.schema.json",
+  "title": "Phase 1 Event Envelope Profile v1.0.0",
   "description": "Executable profile applied with each legacy-compatible v1 Event Schema. It requires applicationId and evaluationRunId presence without breaking the Phase 0 base envelope.",
   "allOf": [
     { "$ref": "event-envelope.schema.json" },
