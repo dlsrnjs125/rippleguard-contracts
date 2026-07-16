@@ -1,0 +1,109 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "RippleGuard Phase 1 Core MSA API",
+    "version": "1.0.0",
+    "description": "Executable Loan Application and minimal Audit Timeline API. Replay, graph, and hash-chain APIs are intentionally excluded."
+  },
+  "servers": [{ "url": "/" }],
+  "paths": {
+    "/api/v1/loan-applications": {
+      "post": {
+        "operationId": "createLoanApplication",
+        "summary": "Create and submit a loan application from synthetic or masked references",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "../schemas/rest/loan-application-create-request.v1.0.0.schema.json" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Application created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "../schemas/rest/loan-application.v1.0.0.schema.json" }
+              }
+            }
+          },
+          "409": { "$ref": "#/components/responses/IdempotencyConflict" }
+        }
+      }
+    },
+    "/api/v1/loan-applications/{applicationId}": {
+      "get": {
+        "operationId": "getLoanApplication",
+        "summary": "Get a loan application",
+        "parameters": [{ "$ref": "#/components/parameters/ApplicationId" }],
+        "responses": {
+          "200": {
+            "description": "Application found",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "../schemas/rest/loan-application.v1.0.0.schema.json" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
+    "/api/v1/cases/{caseId}/timeline": {
+      "get": {
+        "operationId": "getCaseTimeline",
+        "summary": "Get the minimal ordered audit timeline for a decision case",
+        "parameters": [{ "$ref": "#/components/parameters/CaseId" }],
+        "responses": {
+          "200": {
+            "description": "Timeline read model",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "../schemas/rest/case-timeline.v1.0.0.schema.json" }
+              }
+            }
+          },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    }
+  },
+  "components": {
+    "parameters": {
+      "ApplicationId": {
+        "name": "applicationId",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string", "format": "uuid" }
+      },
+      "CaseId": {
+        "name": "caseId",
+        "in": "path",
+        "required": true,
+        "schema": { "type": "string", "minLength": 1 }
+      }
+    },
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" }
+        },
+        "required": ["code", "message"],
+        "additionalProperties": false
+      }
+    },
+    "responses": {
+      "NotFound": {
+        "description": "Resource not found",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      },
+      "IdempotencyConflict": {
+        "description": "The idempotency key was reused with a different request",
+        "content": { "application/json": { "schema": { "$ref": "#/components/schemas/Error" } } }
+      }
+    }
+  }
+}

@@ -4,7 +4,9 @@
   "schemaVersion": "1.1.0",
   "occurredAt": "2026-01-15T10:00:00+09:00",
   "producer": "loan-service",
+  "applicationId": "loan-1101",
   "caseId": "loan-1101",
+  "evaluationRunId": null,
   "correlationId": "loan-1101",
   "causationId": null,
   "payload": { "applicationId": "loan-1101", "applicantId": "customer-43", "inputSnapshotVersion": "snapshot-v1", "submittedAt": "2026-01-15T10:00:00+09:00", "submissionChannel": "WEB" }

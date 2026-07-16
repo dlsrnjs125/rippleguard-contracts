@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "commandId": "50000000-0000-4000-8000-000000000001",
+  "applicationId": "10000000-0000-4000-8000-000000000001",
+  "decisionCaseId": "case-001",
+  "evaluationRunId": "40000000-0000-4000-8000-000000000001",
+  "decision": "APPROVE",
+  "reasonCodes": ["GOVERNANCE_VERIFIED_MOCK_PROPOSAL"],
+  "issuedAt": "July 16, 2026",
+  "idempotencyKey": "decision-command-case-001"
+}

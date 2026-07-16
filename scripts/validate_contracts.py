@@ -22,6 +22,7 @@ except ImportError:
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMAS = ROOT / "schemas"
+OPENAPI = ROOT / "openapi"
 VALID = ROOT / "examples" / "valid"
 INVALID = ROOT / "examples" / "invalid"
 SCENARIOS = ROOT / "examples" / "scenarios"
@@ -30,6 +31,11 @@ VERSIONED_SCHEMA_NAME = re.compile(
     r"^(?P<base>.+)\.v(?P<major>[1-9][0-9]*)\.(?P<minor>[0-9]+)\.(?P<patch>[0-9]+)\.schema\.json$"
 )
 VERSION_DIR = re.compile(r"v[1-9][0-9]*\.[0-9]+\.[0-9]+")
+OPENAPI_NAME = re.compile(r"^.+\.v(?P<version>[1-9][0-9]*\.[0-9]+\.[0-9]+)\.openapi\.json$")
+EVENT_ENVELOPE_FIELDS = {
+    "eventId", "eventType", "schemaVersion", "occurredAt", "producer",
+    "applicationId", "caseId", "evaluationRunId", "correlationId", "causationId", "payload",
+}
 
 
 def json_files(directory: Path) -> list[Path]:
@@ -53,6 +59,48 @@ def nested_refs(value: Any) -> Iterator[str]:
     elif isinstance(value, list):
         for child in value:
             yield from nested_refs(child)
+
+
+def validate_openapi(path: Path, document: Any, loaded: dict[Path, Any]) -> list[str]:
+    failures: list[str] = []
+    relative = path.relative_to(ROOT)
+    name_match = OPENAPI_NAME.fullmatch(path.name)
+    if not name_match:
+        failures.append(f"OpenAPI filename must include full version: {relative}")
+    if not isinstance(document, dict) or not str(document.get("openapi", "")).startswith("3.1."):
+        return failures + [f"OpenAPI 3.1 document required: {relative}"]
+    if not isinstance(document.get("info"), dict) or not document["info"].get("title") or not document["info"].get("version"):
+        failures.append(f"OpenAPI info.title and info.version required: {relative}")
+    elif name_match and document["info"]["version"] != name_match.group("version"):
+        failures.append(f"OpenAPI info.version does not match filename: {relative}")
+    paths = document.get("paths")
+    if not isinstance(paths, dict):
+        return failures + [f"OpenAPI paths object required: {relative}"]
+    required_operations = {
+        ("/api/v1/loan-applications", "post"),
+        ("/api/v1/loan-applications/{applicationId}", "get"),
+        ("/api/v1/cases/{caseId}/timeline", "get"),
+    }
+    for endpoint, method in required_operations:
+        operation = paths.get(endpoint, {}).get(method)
+        if not isinstance(operation, dict):
+            failures.append(f"missing OpenAPI operation {method.upper()} {endpoint}")
+        elif not isinstance(operation.get("responses"), dict) or not operation["responses"]:
+            failures.append(f"OpenAPI operation has no responses: {method.upper()} {endpoint}")
+    for reference in nested_refs(document):
+        if reference.startswith("#"):
+            current: Any = document
+            try:
+                for token in reference[2:].split("/") if reference.startswith("#/") else []:
+                    current = current[token.replace("~1", "/").replace("~0", "~")]
+            except (KeyError, TypeError):
+                failures.append(f"unresolved OpenAPI local $ref {reference} in {relative}")
+            continue
+        target_text = reference.split("#", 1)[0]
+        target = (path.parent / target_text).resolve()
+        if target not in loaded:
+            failures.append(f"unresolved OpenAPI relative $ref {reference} in {relative}")
+    return failures
 
 
 def property_consts(value: Any, property_name: str) -> set[Any]:
@@ -437,7 +485,8 @@ def main() -> int:
     failures: list[str] = []
     invalid_paths = [path for path in json_files(INVALID) if path != INVALID_MANIFEST]
     valid_paths = json_files(VALID)
-    all_json = json_files(SCHEMAS) + valid_paths + invalid_paths + [INVALID_MANIFEST] + json_files(SCENARIOS)
+    openapi_paths = json_files(OPENAPI)
+    all_json = json_files(SCHEMAS) + openapi_paths + valid_paths + invalid_paths + [INVALID_MANIFEST] + json_files(SCENARIOS)
     loaded: dict[Path, Any] = {}
     for path in all_json:
         try:
@@ -452,6 +501,18 @@ def main() -> int:
         failures.append(f"duplicate schema $id values: {', '.join(duplicates)}")
     if any(not value for value in schema_ids):
         failures.append("every schema must define a non-empty $id")
+
+    envelope_path = SCHEMAS / "common" / "event-envelope.schema.json"
+    envelope = loaded.get(envelope_path, {})
+    envelope_properties = set(envelope.get("properties", {})) if isinstance(envelope, dict) else set()
+    if not EVENT_ENVELOPE_FIELDS.issubset(envelope_properties):
+        failures.append(
+            "event envelope is missing fields: "
+            + ", ".join(sorted(EVENT_ENVELOPE_FIELDS - envelope_properties))
+        )
+
+    for path in openapi_paths:
+        failures.extend(validate_openapi(path, loaded.get(path), loaded))
 
     registry = Registry()
     versioned_schemas: dict[str, list[tuple[tuple[int, int, int], Path, dict[str, Any]]]] = {}
@@ -585,7 +646,7 @@ def main() -> int:
             print(f"- {failure}")
         return 1
     print(
-        f"Validated {len(schema_paths)} schemas, {len(valid_paths)} valid examples, "
+        f"Validated {len(schema_paths)} schemas, {len(openapi_paths)} OpenAPI documents, {len(valid_paths)} valid examples, "
         f"{len(invalid_paths)} intentional invalid examples, {len(scenarios)} scenarios, "
         f"and {compatibility_checks} fixture-backed compatibility checks."
     )

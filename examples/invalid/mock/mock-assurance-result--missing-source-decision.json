@@ -1,0 +1,7 @@
+{
+  "schemaVersion": "1.0.0",
+  "evaluationRunId": "40000000-0000-4000-8000-000000000001",
+  "status": "ASSURANCE_COMPLETE",
+  "reasonCodes": ["MOCK_REQUIRED_FIELDS_PRESENT"],
+  "assessedAt": "2026-07-16T09:02:00+09:00"
+}

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "1.0.0",
+  "caseId": "case-001",
+  "applicationId": "10000000-0000-4000-8000-000000000001",
+  "events": [{
+    "eventId": "20000000-0000-4000-8000-000000000002",
+    "eventType": "governance.review.started.v1",
+    "occurredAt": "2026-07-16T09:00:10+09:00",
+    "producer": "governance-service",
+    "evaluationRunId": null,
+    "correlationId": "10000000-0000-4000-8000-000000000001",
+    "causationId": "not-an-event-uuid",
+    "status": "INVALID_REFERENCE",
+    "summary": "Causation reference is malformed"
+  }],
+  "traceCompleteness": "PARTIAL",
+  "warnings": ["MALFORMED_CAUSATION_REFERENCE"]
+}

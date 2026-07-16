@@ -1,0 +1,11 @@
+{
+  "schemaVersion": "1.0.0",
+  "decisionId": "30000000-0000-4000-8000-000000000001",
+  "evaluationRunId": "40000000-0000-4000-8000-000000000001",
+  "decisionCaseId": "case-001",
+  "proposal": "MOCK_APPROVE",
+  "reasonCodes": ["MOCK_RULE_DEBT_RATIO_OK"],
+  "inputSnapshotVersion": "snapshot-v1",
+  "mockRuleVersion": "phase1-rules-1.0.0",
+  "createdAt": "2026-07-16T09:01:00+09:00"
+}

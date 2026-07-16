@@ -53,6 +53,13 @@
     { "fixture": "domain/evaluation-run--supersedes-time-invalid.json", "expectedType": "semantic", "expectedCode": "EVALUATION_RUN_SUPERSEDES_TIME_INVALID", "scenario": "phase1-evidence-reassessment" },
     { "fixture": "domain/evaluation-run--supersedes-non-terminal.json", "expectedType": "semantic", "expectedCode": "EVALUATION_RUN_SUPERSEDES_NON_TERMINAL", "scenario": "phase1-evidence-reassessment" },
     { "fixture": "domain/evaluation-run--cycle-a.json", "expectedType": "semantic", "expectedCode": "EVALUATION_RUN_SUPERSESSION_CYCLE", "scenario": "supersession-cycle" },
-    { "fixture": "domain/evaluation-run--cycle-b.json", "expectedType": "semantic", "expectedCode": "EVALUATION_RUN_SUPERSESSION_CYCLE", "scenario": "supersession-cycle" }
+    { "fixture": "domain/evaluation-run--cycle-b.json", "expectedType": "semantic", "expectedCode": "EVALUATION_RUN_SUPERSESSION_CYCLE", "scenario": "supersession-cycle" },
+    { "fixture": "rest/loan-application-create-request--missing-idempotency-key.json", "expectedType": "required", "expectedCode": "idempotencyKey" },
+    { "fixture": "rest/loan-application--bad-status.json", "expectedType": "enum", "expectedCode": "PENDING" },
+    { "fixture": "rest/case-timeline--bad-date.json", "expectedType": "pattern", "expectedCode": "occurredAt" },
+    { "fixture": "rest/case-timeline--bad-causation-reference.json", "expectedType": "format", "expectedCode": "causationId" },
+    { "fixture": "mock/mock-evaluation-result--bad-proposal.json", "expectedType": "enum", "expectedCode": "APPROVE" },
+    { "fixture": "mock/mock-assurance-result--missing-source-decision.json", "expectedType": "required", "expectedCode": "sourceDecisionId" },
+    { "fixture": "commands/loan-decision-command--bad-date.json", "expectedType": "pattern", "expectedCode": "issuedAt" }
   ]
 }

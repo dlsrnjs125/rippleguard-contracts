@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.rippleguard.dev/commands/loan-decision-command.v1.0.0.schema.json",
+  "title": "Loan Decision Command",
+  "description": "Idempotent Governance instruction to Loan Service after proposal and assurance verification. REJECT is a final lending outcome, not a Governance hard block; BLOCKED belongs to Evaluation Run or Decision Case state.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "commandId": { "type": "string", "format": "uuid" },
+    "applicationId": { "type": "string", "format": "uuid" },
+    "decisionCaseId": { "type": "string", "minLength": 1 },
+    "evaluationRunId": { "type": "string", "format": "uuid" },
+    "decision": { "type": "string", "enum": ["APPROVE", "CONDITIONAL_APPROVE", "REQUEST_MORE_EVIDENCE", "REJECT"] },
+    "reasonCodes": { "type": "array", "minItems": 1, "uniqueItems": true, "items": { "type": "string", "minLength": 1 } },
+    "issuedAt": { "type": "string", "format": "date-time", "pattern": "T.*(?:Z|[+-][0-9]{2}:[0-9]{2})$" },
+    "idempotencyKey": { "type": "string", "minLength": 8, "maxLength": 128 }
+  },
+  "required": ["schemaVersion", "commandId", "applicationId", "decisionCaseId", "evaluationRunId", "decision", "reasonCodes", "issuedAt", "idempotencyKey"],
+  "additionalProperties": false
+}
