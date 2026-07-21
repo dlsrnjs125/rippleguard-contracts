@@ -1,0 +1,24 @@
+{
+  "eventId": "10000000-0000-4000-8000-000000002201",
+  "eventType": "governance.agent-result.validated.v1",
+  "schemaVersion": "1.0.0",
+  "occurredAt": "2026-07-21T10:10:04+09:00",
+  "producer": "governance-service",
+  "applicationId": "10000000-0000-4000-8000-000000002001",
+  "caseId": "case-2001",
+  "evaluationRunId": "30000000-0000-4000-8000-000000002001",
+  "correlationId": "10000000-0000-4000-8000-000000002001",
+  "causationId": "10000000-0000-4000-8000-000000002200",
+  "payload": {
+    "decisionCaseId": "case-2001",
+    "evaluationRunId": "30000000-0000-4000-8000-000000002001",
+    "agentRunId": "60000000-0000-4000-8000-000000002001",
+    "attemptId": 1,
+    "agentResultReference": "agent-result://case-2001/60000000-0000-4000-8000-000000002001/attempt-1",
+    "agentResultDigest": "sha256:14894f822eb1e00eada33940c2160598c8bde2865e1ddfb2959092a175e4c2fa",
+    "validationOutcome": "VALIDATED",
+    "validationReasonCodes": ["SCHEMA_VALID", "MODEL_PROVENANCE_VALID", "SNAPSHOT_MATCHED", "SHAP_PRESENT"],
+    "validatedSchemaVersion": "1.0.0",
+    "validatedAt": "2026-07-21T10:10:04+09:00"
+  }
+}

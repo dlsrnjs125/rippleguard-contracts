@@ -1,0 +1,9 @@
+{
+  "name": "phase2-request-model-version-mismatch",
+  "expectedSemanticErrors": ["PHASE2_REQUEST_MANIFEST_FEATURE_SCHEMA_MISMATCH"],
+  "causationEdges": [],
+  "fixtures": [
+    "examples/valid/agent-output/v1.0.0/tabular-model-manifest.json",
+    "examples/invalid/commands/v1.0.0/loan-decision-agent-request--inconsistent-model-version.json"
+  ]
+}

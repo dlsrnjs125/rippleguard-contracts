@@ -1,0 +1,11 @@
+{
+  "name": "phase2-broken-causation",
+  "expectedSemanticErrors": ["CAUSATION_EVENT_NOT_FOUND"],
+  "causationEdges": [
+    { "from": "agent.evaluation.requested.v1", "to": "governance.agent-result.validated.v1" }
+  ],
+  "fixtures": [
+    "examples/valid/agent-output/v1.0.0/loan-decision-agent-result.json",
+    "examples/invalid/events/v1.0.0/governance.agent-result.validated.v1--broken-causation.json"
+  ]
+}

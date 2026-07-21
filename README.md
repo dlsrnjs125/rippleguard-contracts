@@ -8,7 +8,7 @@ RippleGuard 서비스와 Agent 사이의 실행 가능한 JSON Schema 계약 원
 - `schemas/events`: Full SemVer 파일로 분리된 Phase 1 비동기 Event
 - `schemas/external-risk-signal`: Full SemVer FDS 위험신호 입력
 - `schemas/domain`: 상태와 Full SemVer Evaluation Run
-- `schemas/agent-output`: Full SemVer Decision Envelope와 최소 Assurance 결과
+- `schemas/agent-output`: Full SemVer Decision Envelope, 최소 Assurance 결과, Phase 2 Loan Proposal, Agent Result와 Tabular Model Manifest
 - `schemas/rest`, `openapi`: Loan Application과 최소 Case Timeline REST 계약
 - `schemas/agent-output`, `schemas/commands`: Mock이 재사용하는 Decision Envelope와 단일 Loan Decision Command payload
 - `examples/valid`, `examples/invalid`: 성공·실패 검증 fixture
@@ -32,7 +32,7 @@ Event 이름(`eventType`)과 Schema 버전(`schemaVersion`)은 별도 필드입�
 
 ## Phase 범위
 
-Phase 0 Event·상태 기반을 보존하면서 Phase 1 Loan REST, Mock Evaluation·Assurance, Decision Command와 최소 Timeline을 추가합니다. 실제 Agent, OPA Policy Input, Replay·Graph DTO와 언어별 DTO는 포함하지 않습니다. 자세한 경계는 [phase-1-contract-scope.md](docs/phase-1-contract-scope.md)에 있습니다.
+Phase 0 Event·상태 기반을 보존하면서 Phase 1 Loan REST, Mock Evaluation·Assurance, Decision Command와 최소 Timeline을 추가합니다. Phase 2는 Loan Decision Agent의 Feature, Snapshot, Proposal, Model Manifest, Agent Run, Request·Result와 Governance Validation Audit 계약을 추가합니다. 실제 Local LLM, OPA Policy Input, Replay·Graph DTO와 언어별 DTO는 포함하지 않습니다. 자세한 경계는 [phase-1-contract-scope.md](docs/phase-1-contract-scope.md)와 [phase-2-contract-scope.md](docs/phase-2-contract-scope.md)에 있습니다.
 
 ## Producer와 Consumer 사용법
 

@@ -1,0 +1,18 @@
+{
+  "schemaVersion": "1.0.0",
+  "decisionCaseId": "case-2001",
+  "evaluationRunId": "30000000-0000-4000-8000-000000002001",
+  "agentRunId": "60000000-0000-4000-8000-000000002001",
+  "agentType": "LOAN_DECISION_AGENT",
+  "requestIdempotencyKey": "loan-agent-case-2001-v1",
+  "snapshotReference": { "schemaVersion": "1.0.0", "snapshotId": "snapshot-2001", "snapshotVersion": "v1", "snapshotSchemaVersion": "1.0.0", "snapshotCreatedAt": "2026-07-21T10:00:00+09:00", "digestAlgorithm": "sha256", "snapshotDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "snapshotReference": "snapshot://loan-2001/v1", "referenceType": "IMMUTABLE_REFERENCE" },
+  "featureSchemaVersion": "phase-2-loan-features.v9.0.0",
+  "preprocessingVersion": "preprocess.v1.0.0",
+  "modelVersion": "loan-model.v1.0.0",
+  "modelArtifactDigest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "thresholdVersion": "threshold.v1.0.0",
+  "requestedAt": "2026-07-21T10:09:58+09:00",
+  "deadlineAt": "2026-07-21T10:10:28+09:00",
+  "correlationId": "10000000-0000-4000-8000-000000002001",
+  "causationId": "10000000-0000-4000-8000-000000002105"
+}

@@ -1,0 +1,10 @@
+{
+  "name": "phase2-conflicting-result",
+  "expectedSemanticErrors": ["PHASE2_AGENT_RUN_RESULT_CONFLICT", "PHASE2_ATTEMPT_ID_DUPLICATE"],
+  "causationEdges": [],
+  "fixtures": [
+    "examples/valid/commands/v1.0.0/loan-decision-agent-request.json",
+    "examples/valid/agent-output/v1.0.0/loan-decision-agent-result.json",
+    "examples/invalid/agent-output/v1.0.0/loan-decision-agent-result--same-run-conflicting-result.json"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "name": "phase2-model-artifact-mismatch",
+  "expectedSemanticErrors": ["PHASE2_AGENT_RUN_MODELARTIFACTDIGEST_MISMATCH", "PHASE2_RESULT_MANIFEST_ARTIFACT_DIGEST_MISMATCH"],
+  "causationEdges": [],
+  "fixtures": [
+    "examples/valid/agent-output/v1.0.0/tabular-model-manifest.json",
+    "examples/valid/commands/v1.0.0/loan-decision-agent-request.json",
+    "examples/invalid/agent-output/v1.0.0/loan-decision-agent-result--same-run-different-artifact.json"
+  ]
+}

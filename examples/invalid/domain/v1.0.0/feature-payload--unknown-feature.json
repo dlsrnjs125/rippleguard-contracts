@@ -1,0 +1,20 @@
+{
+  "schemaVersion": "1.0.0",
+  "featureSchemaVersion": "phase-2-loan-features.v1.0.0",
+  "features": {
+    "annualIncome": 72000000,
+    "monthlyIncomeMean": 6000000,
+    "monthlyIncomeVolatility": 0.18,
+    "debtToIncomeRatio": 0.32,
+    "existingDebtAmount": 18000000,
+    "delinquencyCount": 0,
+    "platformSettlementMonths": 36,
+    "platformSettlementMean": 5200000,
+    "platformSettlementVolatility": 0.21,
+    "contractDurationMonths": 48,
+    "incomeDeclarationAvailable": true,
+    "telecomPaymentDelinquencyCount": 0,
+    "promptInjectionScore": 1
+  },
+  "featurePayloadDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+}

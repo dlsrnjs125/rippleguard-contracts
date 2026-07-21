@@ -1,0 +1,47 @@
+{
+  "schemaVersion": "1.0.0",
+  "decisionCaseId": "case-2001",
+  "evaluationRunId": "30000000-0000-4000-8000-000000002001",
+  "agentRunId": "60000000-0000-4000-8000-000000002001",
+  "agentType": "LOAN_DECISION_AGENT",
+  "requestIdempotencyKey": "loan-agent-case-2001-v1",
+  "snapshotReference": {
+    "schemaVersion": "1.0.0",
+    "snapshotId": "snapshot-2001",
+    "snapshotVersion": "v1",
+    "snapshotSchemaVersion": "1.0.0",
+    "snapshotCreatedAt": "2026-07-21T10:00:00+09:00",
+    "digestAlgorithm": "sha256",
+    "snapshotDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "snapshotReference": "snapshot://loan-2001/v1",
+    "referenceType": "MATERIALIZED_FEATURES"
+  },
+  "featureSchemaVersion": "phase-2-loan-features.v1.0.0",
+  "featurePayload": {
+    "schemaVersion": "1.0.0",
+    "featureSchemaVersion": "phase-2-loan-features.v1.0.0",
+    "features": {
+      "annualIncome": 72000000,
+      "monthlyIncomeMean": 6000000,
+      "monthlyIncomeVolatility": 0.18,
+      "debtToIncomeRatio": 0.32,
+      "existingDebtAmount": 18000000,
+      "delinquencyCount": 0,
+      "platformSettlementMonths": 36,
+      "platformSettlementMean": 5200000,
+      "platformSettlementVolatility": 0.21,
+      "contractDurationMonths": 48,
+      "incomeDeclarationAvailable": true,
+      "telecomPaymentDelinquencyCount": 0
+    },
+    "featurePayloadDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "preprocessingVersion": "preprocess.v1.0.0",
+  "modelVersion": "loan-model.v1.0.0",
+  "modelArtifactDigest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "thresholdVersion": "threshold.v1.0.0",
+  "requestedAt": "2026-07-21T10:09:58+09:00",
+  "deadlineAt": "2026-07-21T10:10:28+09:00",
+  "correlationId": "10000000-0000-4000-8000-000000002001",
+  "causationId": "10000000-0000-4000-8000-000000002105"
+}
