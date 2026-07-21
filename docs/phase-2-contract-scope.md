@@ -67,6 +67,8 @@ Agent Runtime owns `attemptId` and runtime attempt metadata. Retrying the same l
 
 Duplicate identical requests are handled by Governance idempotency lookup and should return or acknowledge the existing run/result instead of creating a new failed Agent Result. If the same idempotency key is reused with different immutable inputs, the request is blocked as `AGENT_RUN_INPUT_CONFLICT`.
 
+`requestedAt` must be earlier than `deadlineAt`, and the referenced Snapshot must already exist by request time.
+
 ## Failure Classification
 
 Top-level classifications are:
@@ -83,6 +85,28 @@ The validator fixes reason-code mappings for Phase 2. Unknown failure codes must
 `tabular-model-manifest.v1.0.0` requires framework, feature schema, preprocessing, dataset, training commit, random seed, threshold, artifact digest, SHAP explainer, runtime and dependency metadata. Model binary artifacts are referenced by immutable URI and digest; binaries are not stored in this repository.
 
 `runtimeImageDigest` means the OCI image manifest digest for the exact runtime image. A local mutable tag, Docker image ID or archive hash is not accepted as the published runtime baseline.
+
+## Audit Result Reference
+
+Governance audit events use two provenance links:
+
+- `causationId` references the nearest persisted event cause, currently `agent.evaluation.requested.v1`.
+- `agentResultReference` and `agentResultDigest` reference the directly validated Agent Result payload.
+
+`agentResultReference` is fixed as `agent-result://{decisionCaseId}/{agentRunId}/attempt-{attemptId}`.
+
+`agentResultDigest` is SHA-256 over the full Agent Result payload using canonical JSON serialization:
+
+- UTF-8
+- object keys sorted lexicographically
+- separators `,` and `:` with no insignificant whitespace
+- Unicode emitted without ASCII escaping
+
+If a future transport introduces a persisted Agent Result event, the audit event `causationId` may move to that result event in a new contract version.
+
+## Feature Digest
+
+`featurePayloadDigest` is producer-declared in v1.0.0 and identifies the materialized feature payload used for the request. Runtime producers and consumers must recompute it consistently, but a shared canonical Feature Payload digest profile is deferred to a later compatible schema revision. Until then, `make validate` guards the published Feature Schema and executable Feature Payload schema against type/range/required-field drift.
 
 ## Known Limitations
 

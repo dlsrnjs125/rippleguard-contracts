@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import re
 import sys
 from collections import Counter
@@ -185,6 +186,17 @@ def register_unique(index: dict[str, Any], key: Any, value: Any, code: str, fail
 
 
 def phase2_result_fingerprint(result: dict[str, Any]) -> str:
+    proposal = result.get("proposal", {})
+    canonical_proposal = {
+        "proposalOutcome": proposal.get("proposalOutcome"),
+        "repaymentLikelihoodScore": proposal.get("repaymentLikelihoodScore"),
+        "threshold": proposal.get("threshold"),
+        "thresholdVersion": proposal.get("thresholdVersion"),
+        "comparisonDirection": proposal.get("comparisonDirection"),
+        "reasonCodes": sorted(proposal.get("reasonCodes", [])),
+        "modelVersion": proposal.get("modelVersion"),
+        "featureSchemaVersion": proposal.get("featureSchemaVersion"),
+    } if isinstance(proposal, dict) else None
     canonical = {
         "snapshotDigest": result.get("snapshotReference", {}).get("snapshotDigest"),
         "featureSchemaVersion": result.get("featureSchemaVersion"),
@@ -192,11 +204,54 @@ def phase2_result_fingerprint(result: dict[str, Any]) -> str:
         "modelVersion": result.get("modelVersion"),
         "modelArtifactDigest": result.get("modelArtifactDigest"),
         "thresholdVersion": result.get("thresholdVersion"),
-        "proposal": result.get("proposal"),
+        "proposal": canonical_proposal,
         "explanationDigest": result.get("explanationDigest"),
         "evidenceRefs": sorted(result.get("evidenceRefs", [])),
     }
     return json.dumps(canonical, sort_keys=True, separators=(",", ":"))
+
+
+def canonical_json_digest(value: Any) -> str:
+    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return "sha256:" + hashlib.sha256(encoded).hexdigest()
+
+
+def feature_schema_projection_errors(feature_schema: Any, payload_schema: Any) -> list[str]:
+    if not isinstance(feature_schema, dict) or not isinstance(payload_schema, dict):
+        return []
+    payload_features = (
+        payload_schema.get("properties", {})
+        .get("features", {})
+        .get("properties", {})
+    )
+    payload_required = set(
+        payload_schema.get("properties", {})
+        .get("features", {})
+        .get("required", [])
+    )
+    if not isinstance(payload_features, dict):
+        return ["PHASE2_FEATURE_PAYLOAD_SCHEMA_MISSING_FEATURES"]
+    failures: list[str] = []
+    for feature in feature_schema.get("features", []):
+        if not isinstance(feature, dict):
+            continue
+        name = feature.get("name")
+        payload = payload_features.get(name)
+        if not isinstance(payload, dict):
+            failures.append(f"PHASE2_FEATURE_PAYLOAD_PROJECTION_MISSING:{name}")
+            continue
+        expected_type = feature.get("valueType")
+        if payload.get("type") != expected_type:
+            failures.append(f"PHASE2_FEATURE_PAYLOAD_TYPE_DRIFT:{name}")
+        for bound in ("minimum", "maximum"):
+            if bound in feature and payload.get(bound) != feature.get(bound):
+                failures.append(f"PHASE2_FEATURE_PAYLOAD_{bound.upper()}_DRIFT:{name}")
+        if feature.get("required") is True and name not in payload_required:
+            failures.append(f"PHASE2_FEATURE_PAYLOAD_REQUIRED_DRIFT:{name}")
+    ordered = feature_schema.get("featureOrder", [])
+    if set(ordered) != set(payload_features):
+        failures.append("PHASE2_FEATURE_PAYLOAD_FEATURE_SET_DRIFT")
+    return failures
 
 
 def build_semantic_context(
@@ -381,6 +436,13 @@ def semantic_errors(instance: Any, context: dict[str, Any] | None = None) -> lis
 
     if instance.get("agentType") == "LOAN_DECISION_AGENT" and instance.get("snapshotReference"):
         feature_payload = instance.get("featurePayload")
+        try:
+            if parse_timestamp(instance["deadlineAt"]) <= parse_timestamp(instance["requestedAt"]):
+                failures.append("PHASE2_REQUEST_DEADLINE_NOT_AFTER_REQUEST")
+            if parse_timestamp(instance["snapshotReference"]["snapshotCreatedAt"]) > parse_timestamp(instance["requestedAt"]):
+                failures.append("PHASE2_REQUEST_SNAPSHOT_CREATED_AFTER_REQUEST")
+        except (KeyError, TypeError, ValueError):
+            pass
         if isinstance(feature_payload, dict) and instance.get("featureSchemaVersion") != feature_payload.get("featureSchemaVersion"):
             failures.append("PHASE2_REQUEST_FEATURE_SCHEMA_MISMATCH")
         reference_type = instance.get("snapshotReference", {}).get("referenceType")
@@ -436,6 +498,15 @@ def semantic_errors(instance: Any, context: dict[str, Any] | None = None) -> lis
         reason_codes = set(payload.get("validationReasonCodes", []))
         valid_codes = {"SCHEMA_VALID", "MODEL_PROVENANCE_VALID", "SNAPSHOT_MATCHED", "SHAP_PRESENT"}
         rejected_codes = {"SCHEMA_INVALID", "MODEL_PROVENANCE_INVALID", "SNAPSHOT_MISMATCH", "SHAP_MISSING", "AGENT_FAILURE_RECORDED"}
+        contradictory_pairs = (
+            ("SCHEMA_VALID", "SCHEMA_INVALID"),
+            ("MODEL_PROVENANCE_VALID", "MODEL_PROVENANCE_INVALID"),
+            ("SNAPSHOT_MATCHED", "SNAPSHOT_MISMATCH"),
+            ("SHAP_PRESENT", "SHAP_MISSING"),
+        )
+        for positive, negative in contradictory_pairs:
+            if positive in reason_codes and negative in reason_codes:
+                failures.append("PHASE2_AUDIT_REASON_CONTRADICTION")
         if payload.get("validationOutcome") == "VALIDATED":
             missing = valid_codes - reason_codes
             if missing:
@@ -447,6 +518,12 @@ def semantic_errors(instance: Any, context: dict[str, Any] | None = None) -> lis
                 failures.append("PHASE2_AUDIT_REJECTED_WITHOUT_REJECTION_REASON")
             if valid_codes.issubset(reason_codes):
                 failures.append("PHASE2_AUDIT_REJECTED_WITH_FULL_VALID_REASON_SET")
+        expected_reference = (
+            f"agent-result://{payload.get('decisionCaseId')}/"
+            f"{payload.get('agentRunId')}/attempt-{payload.get('attemptId')}"
+        )
+        if payload.get("agentResultReference") != expected_reference:
+            failures.append("PHASE2_AUDIT_RESULT_REFERENCE_MISMATCH")
 
     if context is None:
         return failures
@@ -689,13 +766,15 @@ def phase2_context_errors(context: dict[str, Any]) -> list[str]:
 
     for event in context.get("phase2_agent_result_audit_events", {}).values():
         payload = event.get("payload", {})
-        matching_result = False
+        matching_result: dict[str, Any] | None = None
         for result in context.get("phase2_results", {}).get(payload.get("agentRunId"), []):
             if result.get("agentRun", {}).get("attemptId") == payload.get("attemptId"):
-                matching_result = True
+                matching_result = result
                 break
-        if not matching_result:
+        if matching_result is None:
             failures.append("PHASE2_AUDIT_RESULT_REFERENCE_NOT_FOUND")
+        elif payload.get("agentResultDigest") != canonical_json_digest(matching_result):
+            failures.append("PHASE2_AUDIT_RESULT_DIGEST_MISMATCH")
     return failures
 
 
@@ -837,6 +916,11 @@ def main() -> int:
 
     for path in openapi_paths:
         failures.extend(validate_openapi(path, loaded.get(path), loaded))
+
+    failures.extend(feature_schema_projection_errors(
+        loaded.get(VALID / "domain" / "v1.0.0" / "feature-schema.json"),
+        loaded.get(SCHEMAS / "domain" / "feature-payload.v1.0.0.schema.json"),
+    ))
 
     registry = Registry()
     versioned_schemas: dict[str, list[tuple[tuple[int, int, int], Path, dict[str, Any]]]] = {}

@@ -1,5 +1,5 @@
 {
-  "eventId": "10000000-0000-4000-8000-000000002203",
+  "eventId": "10000000-0000-4000-8000-000000002207",
   "eventType": "governance.agent-result.validated.v1",
   "schemaVersion": "1.0.0",
   "occurredAt": "2026-07-21T10:10:04+09:00",
@@ -15,9 +15,9 @@
     "agentRunId": "60000000-0000-4000-8000-000000002001",
     "attemptId": 1,
     "agentResultReference": "agent-result://case-2001/60000000-0000-4000-8000-000000002001/attempt-1",
-    "agentResultDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "agentResultDigest": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
     "validationOutcome": "VALIDATED",
-    "validationReasonCodes": ["SCHEMA_VALID", "SCHEMA_INVALID", "MODEL_PROVENANCE_INVALID", "SHAP_MISSING"],
+    "validationReasonCodes": ["SCHEMA_VALID", "MODEL_PROVENANCE_VALID", "SNAPSHOT_MATCHED", "SHAP_PRESENT"],
     "validatedSchemaVersion": "1.0.0",
     "validatedAt": "2026-07-21T10:10:04+09:00"
   }

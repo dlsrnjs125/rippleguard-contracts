@@ -92,6 +92,7 @@
     { "fixture": "agent-output/v1.0.0/tabular-model-manifest--framework-format-mismatch.json", "expectedType": "enum", "expectedCode": "xgboost-json" },
     { "fixture": "commands/v1.0.0/loan-decision-agent-request--missing-agent-run-id.json", "expectedType": "required", "expectedCode": "agentRunId" },
     { "fixture": "commands/v1.0.0/loan-decision-agent-request--missing-preprocessing-version.json", "expectedType": "required", "expectedCode": "preprocessingVersion" },
+    { "fixture": "commands/v1.0.0/loan-decision-agent-request--deadline-before-request.json", "expectedType": "semantic", "expectedCode": "PHASE2_REQUEST_DEADLINE_NOT_AFTER_REQUEST" },
     { "fixture": "commands/v1.0.0/loan-decision-agent-request--inconsistent-model-version.json", "expectedType": "semantic", "expectedCode": "PHASE2_REQUEST_MANIFEST_FEATURE_SCHEMA_MISMATCH", "scenario": "phase2-request-model-version-mismatch" },
     { "fixture": "agent-output/v1.0.0/loan-decision-agent-result--completed-without-proposal.json", "expectedType": "oneOf", "expectedCode": "not valid" },
     { "fixture": "agent-output/v1.0.0/loan-decision-agent-result--completed-without-explanation.json", "expectedType": "oneOf", "expectedCode": "not valid" },
@@ -107,6 +108,9 @@
     { "fixture": "events/v1.0.0/governance.agent-result.validated.v1--broken-causation.json", "expectedType": "semantic", "expectedCode": "CAUSATION_EVENT_NOT_FOUND", "scenario": "phase2-broken-causation" },
     { "fixture": "events/v1.0.0/governance.agent-result.validated.v1--validated-with-rejection-reasons.json", "expectedType": "oneOf", "expectedCode": "not valid" },
     { "fixture": "events/v1.0.0/governance.agent-result.validated.v1--rejected-with-full-valid-reasons.json", "expectedType": "oneOf", "expectedCode": "not valid" },
+    { "fixture": "events/v1.0.0/governance.agent-result.validated.v1--rejected-with-contradictory-reasons.json", "expectedType": "semantic", "expectedCode": "PHASE2_AUDIT_REASON_CONTRADICTION" },
+    { "fixture": "events/v1.0.0/governance.agent-result.validated.v1--result-reference-mismatch.json", "expectedType": "semantic", "expectedCode": "PHASE2_AUDIT_RESULT_REFERENCE_MISMATCH", "scenario": "phase2-audit-result-reference-mismatch" },
+    { "fixture": "events/v1.0.0/governance.agent-result.validated.v1--result-digest-mismatch.json", "expectedType": "semantic", "expectedCode": "PHASE2_AUDIT_RESULT_DIGEST_MISMATCH", "scenario": "phase2-audit-result-digest-mismatch" },
     { "fixture": "agent-output/v1.0.0/loan-proposal--final-loan-status.json", "expectedType": "additionalProperties", "expectedCode": "finalLoanStatus" },
     { "fixture": "agent-output/v1.0.0/loan-decision-agent-result--local-llm-field.json", "expectedType": "oneOf", "expectedCode": "localLlmPromptVersion" },
     { "fixture": "agent-output/v1.0.0/loan-decision-agent-result--unsupported-major-schema-version.json", "expectedType": "oneOf", "expectedCode": "schemaVersion" }
