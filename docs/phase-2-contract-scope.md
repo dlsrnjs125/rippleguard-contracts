@@ -95,14 +95,25 @@ Governance audit events use two provenance links:
 
 `agentResultReference` is fixed as `agent-result://{decisionCaseId}/{agentRunId}/attempt-{attemptId}`.
 
-`agentResultDigest` is SHA-256 over the full Agent Result payload using canonical JSON serialization:
+`agentResultDigest` is SHA-256 over the full Agent Result payload using RFC 8785 JSON Canonicalization Scheme (JCS):
 
 - UTF-8
-- object keys sorted lexicographically
-- separators `,` and `:` with no insignificant whitespace
-- Unicode emitted without ASCII escaping
+- object keys sorted lexicographically by code point
+- no insignificant whitespace
+- JSON number representation follows RFC 8785
+- Unicode string serialization follows RFC 8785
+- `NaN` and `Infinity` are forbidden
+- duplicate object keys are forbidden
 
 If a future transport introduces a persisted Agent Result event, the audit event `causationId` may move to that result event in a new contract version.
+
+`examples/digest-vectors/agent-result-v1` provides a cross-language golden vector:
+
+- `agent-result-input.json`
+- `canonical-agent-result.json`
+- `expected-sha256.txt`
+
+Python Agent Runtime and Java Governance implementations must match this vector before publishing or validating `agentResultDigest`.
 
 ## Feature Digest
 

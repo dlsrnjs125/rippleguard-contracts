@@ -27,6 +27,7 @@ OPENAPI = ROOT / "openapi"
 VALID = ROOT / "examples" / "valid"
 INVALID = ROOT / "examples" / "invalid"
 SCENARIOS = ROOT / "examples" / "scenarios"
+DIGEST_VECTORS = ROOT / "examples" / "digest-vectors"
 INVALID_MANIFEST = INVALID / "manifest.json"
 VERSIONED_SCHEMA_NAME = re.compile(
     r"^(?P<base>.+)\.v(?P<major>[1-9][0-9]*)\.(?P<minor>[0-9]+)\.(?P<patch>[0-9]+)\.schema\.json$"
@@ -212,8 +213,26 @@ def phase2_result_fingerprint(result: dict[str, Any]) -> str:
 
 
 def canonical_json_digest(value: Any) -> str:
-    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    encoded = canonical_json(value).encode("utf-8")
     return "sha256:" + hashlib.sha256(encoded).hexdigest()
+
+
+def canonical_json(value: Any) -> str:
+    return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+
+
+def phase2_request_immutable(request: dict[str, Any]) -> tuple[Any, ...]:
+    return (
+        request.get("decisionCaseId"),
+        request.get("evaluationRunId"),
+        request.get("agentType"),
+        request.get("snapshotReference", {}).get("snapshotDigest"),
+        request.get("featureSchemaVersion"),
+        request.get("preprocessingVersion"),
+        request.get("modelVersion"),
+        request.get("modelArtifactDigest"),
+        request.get("thresholdVersion"),
+    )
 
 
 def feature_schema_projection_errors(feature_schema: Any, payload_schema: Any) -> list[str]:
@@ -254,6 +273,33 @@ def feature_schema_projection_errors(feature_schema: Any, payload_schema: Any) -
     return failures
 
 
+def digest_vector_errors() -> list[str]:
+    failures: list[str] = []
+    if not DIGEST_VECTORS.exists():
+        return failures
+    for vector_dir in sorted(path for path in DIGEST_VECTORS.iterdir() if path.is_dir()):
+        input_path = vector_dir / "agent-result-input.json"
+        canonical_path = vector_dir / "canonical-agent-result.json"
+        expected_path = vector_dir / "expected-sha256.txt"
+        missing = [path.name for path in (input_path, canonical_path, expected_path) if not path.is_file()]
+        if missing:
+            failures.append(f"digest vector {vector_dir.name} missing files: {', '.join(missing)}")
+            continue
+        try:
+            value = load_json(input_path)
+            canonical = canonical_json(value)
+            expected_canonical = canonical_path.read_text(encoding="utf-8").rstrip("\n")
+            expected_digest = expected_path.read_text(encoding="utf-8").strip()
+        except RuntimeError as error:
+            failures.append(str(error))
+            continue
+        if canonical != expected_canonical:
+            failures.append(f"digest vector canonical mismatch: {vector_dir.relative_to(ROOT)}")
+        if canonical_json_digest(value) != expected_digest:
+            failures.append(f"digest vector sha256 mismatch: {vector_dir.relative_to(ROOT)}")
+    return failures
+
+
 def build_semantic_context(
     instances: list[Any], causation_edges: set[tuple[str, str]] | None = None
 ) -> tuple[dict[str, Any], list[str]]:
@@ -285,7 +331,7 @@ def build_semantic_context(
         if instance.get("modelType") == "TABULAR" and instance.get("modelVersion"):
             register_unique(context["phase2_manifests"], instance.get("modelVersion"), instance, "DUPLICATE_PHASE2_MODEL_MANIFEST", failures)
         if instance.get("agentType") == "LOAN_DECISION_AGENT" and instance.get("snapshotReference"):
-            register_unique(context["phase2_requests"], instance.get("agentRunId"), instance, "DUPLICATE_PHASE2_AGENT_REQUEST", failures)
+            context["phase2_requests"].setdefault(instance.get("agentRunId"), []).append(instance)
         if instance.get("resultStatus") in {"COMPLETED", "FAILED"} and isinstance(instance.get("agentRun"), dict):
             context["phase2_results"].setdefault(instance["agentRun"].get("agentRunId"), []).append(instance)
         if instance.get("eventType") == "governance.agent-result.validated.v1":
@@ -658,7 +704,8 @@ def semantic_errors(instance: Any, context: dict[str, Any] | None = None) -> lis
 
     if instance.get("resultStatus") in {"COMPLETED", "FAILED"}:
         agent_run = instance.get("agentRun", {})
-        request = context["phase2_requests"].get(agent_run.get("agentRunId"))
+        requests = context["phase2_requests"].get(agent_run.get("agentRunId"), [])
+        request = requests[0] if requests else None
         if request is not None:
             immutable_fields = ("decisionCaseId", "evaluationRunId", "requestIdempotencyKey", "featureSchemaVersion", "preprocessingVersion", "modelVersion", "modelArtifactDigest", "thresholdVersion")
             for field in immutable_fields:
@@ -694,26 +741,20 @@ def supersession_graph_errors(context: dict[str, Any]) -> list[str]:
 def phase2_context_errors(context: dict[str, Any]) -> list[str]:
     failures: list[str] = []
     requests_by_key: dict[str, Any] = {}
-    for request in context.get("phase2_requests", {}).values():
-        key = request.get("requestIdempotencyKey")
-        if not key:
-            continue
-        immutable = (
-            request.get("decisionCaseId"),
-            request.get("evaluationRunId"),
-            request.get("agentType"),
-            request.get("snapshotReference", {}).get("snapshotDigest"),
-            request.get("featureSchemaVersion"),
-            request.get("preprocessingVersion"),
-            request.get("modelVersion"),
-            request.get("modelArtifactDigest"),
-            request.get("thresholdVersion"),
-        )
-        previous = requests_by_key.get(key)
-        if previous is None:
-            requests_by_key[key] = immutable
-        elif previous != immutable:
-            failures.append("PHASE2_IDEMPOTENCY_KEY_INPUT_CONFLICT")
+    for agent_run_id, requests in context.get("phase2_requests", {}).items():
+        immutable_by_agent_run = {phase2_request_immutable(request) for request in requests}
+        if len(immutable_by_agent_run) > 1:
+            failures.append("PHASE2_AGENT_RUN_INPUT_CONFLICT")
+        for request in requests:
+            key = request.get("requestIdempotencyKey")
+            if not key:
+                continue
+            immutable = phase2_request_immutable(request)
+            previous = requests_by_key.get(key)
+            if previous is None:
+                requests_by_key[key] = immutable
+            elif previous != immutable:
+                failures.append("PHASE2_IDEMPOTENCY_KEY_INPUT_CONFLICT")
 
     for agent_run_id, results in context.get("phase2_results", {}).items():
         if not agent_run_id or not results:
@@ -916,6 +957,8 @@ def main() -> int:
 
     for path in openapi_paths:
         failures.extend(validate_openapi(path, loaded.get(path), loaded))
+
+    failures.extend(digest_vector_errors())
 
     failures.extend(feature_schema_projection_errors(
         loaded.get(VALID / "domain" / "v1.0.0" / "feature-schema.json"),
