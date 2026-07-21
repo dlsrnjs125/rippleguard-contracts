@@ -1,0 +1,10 @@
+{
+  "name": "phase2-same-run-different-explanation",
+  "causationEdges": [],
+  "expectedSemanticErrors": ["PHASE2_AGENT_RUN_RESULT_CONFLICT"],
+  "fixtures": [
+    "examples/valid/commands/v1.0.0/loan-decision-agent-request.json",
+    "examples/valid/agent-output/v1.0.0/loan-decision-agent-result.json",
+    "examples/invalid/agent-output/v1.0.0/loan-decision-agent-result--same-run-different-explanation.json"
+  ]
+}

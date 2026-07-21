@@ -58,11 +58,14 @@ Governance owns `evaluationRunId`, `agentRunId` and the request idempotency mapp
 - `agentType`
 - Snapshot digest or immutable reference
 - `featureSchemaVersion`
+- `preprocessingVersion`
 - `modelVersion`
 - `modelArtifactDigest`
 - `thresholdVersion`
 
 Agent Runtime owns `attemptId` and runtime attempt metadata. Retrying the same logical request reuses `agentRunId` and creates a new `attemptId`.
+
+Duplicate identical requests are handled by Governance idempotency lookup and should return or acknowledge the existing run/result instead of creating a new failed Agent Result. If the same idempotency key is reused with different immutable inputs, the request is blocked as `AGENT_RUN_INPUT_CONFLICT`.
 
 ## Failure Classification
 
@@ -79,11 +82,14 @@ The validator fixes reason-code mappings for Phase 2. Unknown failure codes must
 
 `tabular-model-manifest.v1.0.0` requires framework, feature schema, preprocessing, dataset, training commit, random seed, threshold, artifact digest, SHAP explainer, runtime and dependency metadata. Model binary artifacts are referenced by immutable URI and digest; binaries are not stored in this repository.
 
+`runtimeImageDigest` means the OCI image manifest digest for the exact runtime image. A local mutable tag, Docker image ID or archive hash is not accepted as the published runtime baseline.
+
 ## Known Limitations
 
 - Agent transport remains payload-level and transport-neutral. Kafka or REST wrapping is a downstream implementation decision.
 - Loan Service Snapshot compatibility is validated through the Snapshot Reference contract here; service code changes, if required, are handled in a later repository PR.
 - Existing Evaluation Run v1/v2 contracts still include Prompt component provenance for Phase 1 compatibility. Phase 2 does not add Local LLM or Prompt contracts.
+- `trainingCodeCommit` is currently a Git SHA-1 commit reference. Non-Git or SHA-256 source provenance can be introduced in a later schema version if needed.
 
 ## Follow-up Repository
 

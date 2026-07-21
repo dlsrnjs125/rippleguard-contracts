@@ -14,6 +14,7 @@
     "snapshotReference": { "$ref": "../domain/snapshot-reference.v1.0.0.schema.json" },
     "featureSchemaVersion": { "type": "string", "minLength": 1 },
     "featurePayload": { "$ref": "../domain/feature-payload.v1.0.0.schema.json" },
+    "preprocessingVersion": { "type": "string", "minLength": 1 },
     "modelVersion": { "type": "string", "minLength": 1 },
     "modelArtifactDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
     "thresholdVersion": { "type": "string", "minLength": 1 },
@@ -22,6 +23,36 @@
     "correlationId": { "type": "string", "minLength": 1 },
     "causationId": { "type": "string", "format": "uuid" }
   },
-  "required": ["schemaVersion", "decisionCaseId", "evaluationRunId", "agentRunId", "agentType", "requestIdempotencyKey", "snapshotReference", "featureSchemaVersion", "modelVersion", "modelArtifactDigest", "thresholdVersion", "requestedAt", "deadlineAt", "correlationId", "causationId"],
+  "required": ["schemaVersion", "decisionCaseId", "evaluationRunId", "agentRunId", "agentType", "requestIdempotencyKey", "snapshotReference", "featureSchemaVersion", "preprocessingVersion", "modelVersion", "modelArtifactDigest", "thresholdVersion", "requestedAt", "deadlineAt", "correlationId", "causationId"],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "snapshotReference": {
+            "properties": {
+              "referenceType": { "const": "MATERIALIZED_FEATURES" }
+            },
+            "required": ["referenceType"]
+          }
+        },
+        "required": ["snapshotReference"]
+      },
+      "then": { "required": ["featurePayload"] }
+    },
+    {
+      "if": {
+        "properties": {
+          "snapshotReference": {
+            "properties": {
+              "referenceType": { "const": "IMMUTABLE_REFERENCE" }
+            },
+            "required": ["referenceType"]
+          }
+        },
+        "required": ["snapshotReference"]
+      },
+      "then": { "not": { "required": ["featurePayload"] } }
+    }
+  ],
   "additionalProperties": false
 }

@@ -184,6 +184,21 @@ def register_unique(index: dict[str, Any], key: Any, value: Any, code: str, fail
         index[key] = value
 
 
+def phase2_result_fingerprint(result: dict[str, Any]) -> str:
+    canonical = {
+        "snapshotDigest": result.get("snapshotReference", {}).get("snapshotDigest"),
+        "featureSchemaVersion": result.get("featureSchemaVersion"),
+        "preprocessingVersion": result.get("preprocessingVersion"),
+        "modelVersion": result.get("modelVersion"),
+        "modelArtifactDigest": result.get("modelArtifactDigest"),
+        "thresholdVersion": result.get("thresholdVersion"),
+        "proposal": result.get("proposal"),
+        "explanationDigest": result.get("explanationDigest"),
+        "evidenceRefs": sorted(result.get("evidenceRefs", [])),
+    }
+    return json.dumps(canonical, sort_keys=True, separators=(",", ":"))
+
+
 def build_semantic_context(
     instances: list[Any], causation_edges: set[tuple[str, str]] | None = None
 ) -> tuple[dict[str, Any], list[str]]:
@@ -368,9 +383,27 @@ def semantic_errors(instance: Any, context: dict[str, Any] | None = None) -> lis
         feature_payload = instance.get("featurePayload")
         if isinstance(feature_payload, dict) and instance.get("featureSchemaVersion") != feature_payload.get("featureSchemaVersion"):
             failures.append("PHASE2_REQUEST_FEATURE_SCHEMA_MISMATCH")
+        reference_type = instance.get("snapshotReference", {}).get("referenceType")
+        if reference_type == "MATERIALIZED_FEATURES" and not isinstance(feature_payload, dict):
+            failures.append("PHASE2_REQUEST_MATERIALIZED_FEATURE_PAYLOAD_MISSING")
+        if reference_type == "IMMUTABLE_REFERENCE" and isinstance(feature_payload, dict):
+            failures.append("PHASE2_REQUEST_IMMUTABLE_REFERENCE_WITH_FEATURE_PAYLOAD")
 
     if instance.get("resultStatus") in {"COMPLETED", "FAILED"}:
         agent_run = instance.get("agentRun", {})
+        if agent_run.get("completedAt") and instance.get("completedAt"):
+            try:
+                agent_completed = parse_timestamp(agent_run["completedAt"])
+                result_completed = parse_timestamp(instance["completedAt"])
+                agent_started = parse_timestamp(agent_run["startedAt"])
+                if agent_run["completedAt"] != instance["completedAt"]:
+                    failures.append("PHASE2_AGENT_RUN_COMPLETED_AT_MISMATCH")
+                if agent_started > agent_completed:
+                    failures.append("PHASE2_AGENT_RUN_TIME_ORDER_INVALID")
+                if agent_completed > result_completed:
+                    failures.append("PHASE2_RESULT_COMPLETED_BEFORE_AGENT_COMPLETED")
+            except (KeyError, TypeError, ValueError):
+                pass
         if agent_run.get("decisionCaseId") and agent_run.get("decisionCaseId") != instance.get("snapshotReference", {}).get("decisionCaseId", agent_run.get("decisionCaseId")):
             pass
         if instance.get("resultStatus") == "COMPLETED":
@@ -400,8 +433,20 @@ def semantic_errors(instance: Any, context: dict[str, Any] | None = None) -> lis
     if event_type == "governance.agent-result.validated.v1":
         if instance.get("producer") != "governance-service":
             failures.append("PHASE2_AUDIT_EVENT_PRODUCER_NOT_GOVERNANCE")
-        if payload.get("validationOutcome") == "VALIDATED" and "SCHEMA_VALID" not in set(payload.get("validationReasonCodes", [])):
-            failures.append("PHASE2_AUDIT_VALIDATED_WITHOUT_SCHEMA_VALID")
+        reason_codes = set(payload.get("validationReasonCodes", []))
+        valid_codes = {"SCHEMA_VALID", "MODEL_PROVENANCE_VALID", "SNAPSHOT_MATCHED", "SHAP_PRESENT"}
+        rejected_codes = {"SCHEMA_INVALID", "MODEL_PROVENANCE_INVALID", "SNAPSHOT_MISMATCH", "SHAP_MISSING", "AGENT_FAILURE_RECORDED"}
+        if payload.get("validationOutcome") == "VALIDATED":
+            missing = valid_codes - reason_codes
+            if missing:
+                failures.append("PHASE2_AUDIT_VALIDATED_REASON_SET_INCOMPLETE")
+            if reason_codes & rejected_codes:
+                failures.append("PHASE2_AUDIT_VALIDATED_WITH_REJECTION_REASON")
+        if payload.get("validationOutcome") == "REJECTED":
+            if not reason_codes & rejected_codes:
+                failures.append("PHASE2_AUDIT_REJECTED_WITHOUT_REJECTION_REASON")
+            if valid_codes.issubset(reason_codes):
+                failures.append("PHASE2_AUDIT_REJECTED_WITH_FULL_VALID_REASON_SET")
 
     if context is None:
         return failures
@@ -527,6 +572,8 @@ def semantic_errors(instance: Any, context: dict[str, Any] | None = None) -> lis
         if manifest is not None:
             if manifest.get("featureSchemaVersion") != instance.get("featureSchemaVersion"):
                 failures.append("PHASE2_REQUEST_MANIFEST_FEATURE_SCHEMA_MISMATCH")
+            if manifest.get("preprocessingVersion") != instance.get("preprocessingVersion"):
+                failures.append("PHASE2_REQUEST_MANIFEST_PREPROCESSING_VERSION_MISMATCH")
             if manifest.get("modelBinaryArtifactDigest") != instance.get("modelArtifactDigest"):
                 failures.append("PHASE2_REQUEST_MANIFEST_ARTIFACT_DIGEST_MISMATCH")
             if manifest.get("thresholdVersion") != instance.get("thresholdVersion"):
@@ -536,7 +583,7 @@ def semantic_errors(instance: Any, context: dict[str, Any] | None = None) -> lis
         agent_run = instance.get("agentRun", {})
         request = context["phase2_requests"].get(agent_run.get("agentRunId"))
         if request is not None:
-            immutable_fields = ("decisionCaseId", "evaluationRunId", "requestIdempotencyKey", "featureSchemaVersion", "modelVersion", "modelArtifactDigest", "thresholdVersion")
+            immutable_fields = ("decisionCaseId", "evaluationRunId", "requestIdempotencyKey", "featureSchemaVersion", "preprocessingVersion", "modelVersion", "modelArtifactDigest", "thresholdVersion")
             for field in immutable_fields:
                 expected = request.get(field) if field != "requestIdempotencyKey" else request.get("requestIdempotencyKey")
                 actual = agent_run.get(field) if field in {"decisionCaseId", "evaluationRunId", "requestIdempotencyKey"} else instance.get(field)
@@ -545,8 +592,11 @@ def semantic_errors(instance: Any, context: dict[str, Any] | None = None) -> lis
             if request.get("snapshotReference", {}).get("snapshotDigest") != instance.get("snapshotReference", {}).get("snapshotDigest"):
                 failures.append("PHASE2_AGENT_RUN_SNAPSHOT_DIGEST_MISMATCH")
         manifest = context["phase2_manifests"].get(instance.get("modelVersion"))
-        if manifest is not None and manifest.get("modelBinaryArtifactDigest") != instance.get("modelArtifactDigest"):
-            failures.append("PHASE2_RESULT_MANIFEST_ARTIFACT_DIGEST_MISMATCH")
+        if manifest is not None:
+            if manifest.get("modelBinaryArtifactDigest") != instance.get("modelArtifactDigest"):
+                failures.append("PHASE2_RESULT_MANIFEST_ARTIFACT_DIGEST_MISMATCH")
+            if manifest.get("preprocessingVersion") != instance.get("preprocessingVersion"):
+                failures.append("PHASE2_RESULT_MANIFEST_PREPROCESSING_VERSION_MISMATCH")
 
     return failures
 
@@ -577,6 +627,7 @@ def phase2_context_errors(context: dict[str, Any]) -> list[str]:
             request.get("agentType"),
             request.get("snapshotReference", {}).get("snapshotDigest"),
             request.get("featureSchemaVersion"),
+            request.get("preprocessingVersion"),
             request.get("modelVersion"),
             request.get("modelArtifactDigest"),
             request.get("thresholdVersion"),
@@ -594,6 +645,7 @@ def phase2_context_errors(context: dict[str, Any]) -> list[str]:
             (
                 result.get("snapshotReference", {}).get("snapshotDigest"),
                 result.get("featureSchemaVersion"),
+                result.get("preprocessingVersion"),
                 result.get("modelVersion"),
                 result.get("modelArtifactDigest"),
                 result.get("thresholdVersion"),
@@ -603,12 +655,37 @@ def phase2_context_errors(context: dict[str, Any]) -> list[str]:
         if len(immutable_values) > 1:
             failures.append("PHASE2_AGENT_RUN_INPUT_CONFLICT")
         completed_fingerprints = {
-            json.dumps(result.get("proposal", {}), sort_keys=True)
+            phase2_result_fingerprint(result)
             for result in results
             if result.get("resultStatus") == "COMPLETED"
         }
         if len(completed_fingerprints) > 1:
             failures.append("PHASE2_AGENT_RUN_RESULT_CONFLICT")
+
+        attempts: list[tuple[int, datetime, datetime]] = []
+        seen_attempts: dict[int, str] = {}
+        for result in results:
+            agent_run = result.get("agentRun", {})
+            attempt_id = agent_run.get("attemptId")
+            if not isinstance(attempt_id, int):
+                continue
+            fingerprint = phase2_result_fingerprint(result)
+            if attempt_id in seen_attempts and seen_attempts[attempt_id] != fingerprint:
+                failures.append("PHASE2_ATTEMPT_ID_DUPLICATE")
+            if attempt_id not in seen_attempts:
+                seen_attempts[attempt_id] = fingerprint
+            else:
+                continue
+            try:
+                attempts.append((attempt_id, parse_timestamp(agent_run["startedAt"]), parse_timestamp(agent_run["completedAt"])))
+            except (KeyError, TypeError, ValueError):
+                pass
+        attempts.sort(key=lambda item: item[1])
+        for previous, current in zip(attempts, attempts[1:]):
+            if current[0] <= previous[0]:
+                failures.append("PHASE2_ATTEMPT_ORDER_INVALID")
+            if current[1] < previous[2]:
+                failures.append("PHASE2_ATTEMPT_TIME_ORDER_INVALID")
 
     for event in context.get("phase2_agent_result_audit_events", {}).values():
         payload = event.get("payload", {})

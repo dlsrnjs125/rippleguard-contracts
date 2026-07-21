@@ -37,7 +37,23 @@
       "items": {
         "type": "object",
         "properties": {
-          "name": { "type": "string", "minLength": 1 },
+          "name": {
+            "type": "string",
+            "enum": [
+              "annualIncome",
+              "monthlyIncomeMean",
+              "monthlyIncomeVolatility",
+              "debtToIncomeRatio",
+              "existingDebtAmount",
+              "delinquencyCount",
+              "platformSettlementMonths",
+              "platformSettlementMean",
+              "platformSettlementVolatility",
+              "contractDurationMonths",
+              "incomeDeclarationAvailable",
+              "telecomPaymentDelinquencyCount"
+            ]
+          },
           "valueType": { "type": "string", "enum": ["integer", "number", "boolean"] },
           "required": { "type": "boolean" },
           "nullable": { "const": false },

@@ -1,8 +1,8 @@
 {
-  "eventId": "10000000-0000-4000-8000-000000002202",
+  "eventId": "10000000-0000-4000-8000-000000002203",
   "eventType": "governance.agent-result.validated.v1",
   "schemaVersion": "1.0.0",
-  "occurredAt": "2026-07-21T10:12:02+09:00",
+  "occurredAt": "2026-07-21T10:10:04+09:00",
   "producer": "governance-service",
   "applicationId": "10000000-0000-4000-8000-000000002001",
   "caseId": "case-2001",
@@ -13,12 +13,12 @@
     "decisionCaseId": "case-2001",
     "evaluationRunId": "30000000-0000-4000-8000-000000002001",
     "agentRunId": "60000000-0000-4000-8000-000000002001",
-    "attemptId": 3,
-    "agentResultReference": "agent-result://case-2001/agent-run-2001/attempt-3",
-    "agentResultDigest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
-    "validationOutcome": "REJECTED",
-    "validationReasonCodes": ["MODEL_PROVENANCE_INVALID", "AGENT_FAILURE_RECORDED"],
+    "attemptId": 1,
+    "agentResultReference": "agent-result://case-2001/agent-run-2001/attempt-1",
+    "agentResultDigest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "validationOutcome": "VALIDATED",
+    "validationReasonCodes": ["SCHEMA_VALID", "SCHEMA_INVALID", "MODEL_PROVENANCE_INVALID", "SHAP_MISSING"],
     "validatedSchemaVersion": "1.0.0",
-    "validatedAt": "2026-07-21T10:12:02+09:00"
+    "validatedAt": "2026-07-21T10:10:04+09:00"
   }
 }

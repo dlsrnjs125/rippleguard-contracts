@@ -14,7 +14,7 @@
     "digestAlgorithm": "sha256",
     "snapshotDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
     "snapshotReference": "snapshot://loan-2001/v1",
-    "referenceType": "IMMUTABLE_REFERENCE"
+    "referenceType": "MATERIALIZED_FEATURES"
   },
   "featureSchemaVersion": "phase-2-loan-features.v1.0.0",
   "featurePayload": {
@@ -36,6 +36,7 @@
     },
     "featurePayloadDigest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
   },
+  "preprocessingVersion": "preprocess.v1.0.0",
   "modelVersion": "loan-model.v1.0.0",
   "modelArtifactDigest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
   "thresholdVersion": "threshold.v1.0.0",

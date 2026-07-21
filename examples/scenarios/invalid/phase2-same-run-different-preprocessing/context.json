@@ -1,0 +1,10 @@
+{
+  "name": "phase2-same-run-different-preprocessing",
+  "causationEdges": [],
+  "expectedSemanticErrors": ["PHASE2_AGENT_RUN_PREPROCESSINGVERSION_MISMATCH", "PHASE2_RESULT_MANIFEST_PREPROCESSING_VERSION_MISMATCH"],
+  "fixtures": [
+    "examples/valid/commands/v1.0.0/loan-decision-agent-request.json",
+    "examples/valid/agent-output/v1.0.0/tabular-model-manifest.json",
+    "examples/invalid/agent-output/v1.0.0/loan-decision-agent-result--same-run-different-preprocessing.json"
+  ]
+}
