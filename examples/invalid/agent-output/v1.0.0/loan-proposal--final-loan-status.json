@@ -1,0 +1,15 @@
+{
+  "schemaVersion": "1.0.0",
+  "proposalId": "70000000-0000-4000-8000-000000002001",
+  "proposalOutcome": "RECOMMEND_APPROVAL",
+  "repaymentLikelihoodScore": 0.86,
+  "scoreSemantics": "higher score means higher repayment likelihood",
+  "threshold": 0.72,
+  "thresholdVersion": "threshold.v1.0.0",
+  "comparisonDirection": "score_greater_than_or_equal_threshold_supports_approval",
+  "reasonCodes": ["LOW_DTI"],
+  "modelVersion": "loan-model.v1.0.0",
+  "featureSchemaVersion": "phase-2-loan-features.v1.0.0",
+  "generatedAt": "2026-07-21T10:10:03+09:00",
+  "finalLoanStatus": "APPROVED"
+}

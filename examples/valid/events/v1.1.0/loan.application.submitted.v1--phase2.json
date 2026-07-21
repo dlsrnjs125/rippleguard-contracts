@@ -1,0 +1,18 @@
+{
+  "eventId": "10000000-0000-4000-8000-000000002105",
+  "eventType": "loan.application.submitted.v1",
+  "schemaVersion": "1.1.0",
+  "occurredAt": "2026-07-21T10:09:00+09:00",
+  "producer": "loan-service",
+  "applicationId": "10000000-0000-4000-8000-000000002001",
+  "caseId": "10000000-0000-4000-8000-000000002001",
+  "evaluationRunId": null,
+  "correlationId": "10000000-0000-4000-8000-000000002001",
+  "causationId": null,
+  "payload": {
+    "applicationId": "10000000-0000-4000-8000-000000002001",
+    "applicantId": "customer-2001",
+    "inputSnapshotVersion": "v1",
+    "submittedAt": "2026-07-21T10:09:00+09:00"
+  }
+}

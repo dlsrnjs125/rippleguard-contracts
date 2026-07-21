@@ -1,0 +1,19 @@
+{
+  "eventId": "10000000-0000-4000-8000-000000002200",
+  "eventType": "agent.evaluation.requested.v1",
+  "schemaVersion": "1.1.0",
+  "occurredAt": "2026-07-21T10:09:58+09:00",
+  "producer": "governance-service",
+  "applicationId": "10000000-0000-4000-8000-000000002001",
+  "caseId": "case-2001",
+  "evaluationRunId": "30000000-0000-4000-8000-000000002001",
+  "correlationId": "10000000-0000-4000-8000-000000002001",
+  "causationId": "10000000-0000-4000-8000-000000002105",
+  "payload": {
+    "evaluationRunId": "30000000-0000-4000-8000-000000002001",
+    "decisionCaseId": "case-2001",
+    "inputSnapshotVersion": "v1",
+    "executionPlanVersion": "phase2-loan-decision.v1",
+    "evaluationMode": "AGENT"
+  }
+}

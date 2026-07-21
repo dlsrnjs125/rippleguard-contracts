@@ -1,0 +1,9 @@
+{
+  "name": "phase2-retry-same-agent-run",
+  "causationEdges": [],
+  "fixtures": [
+    "examples/valid/commands/v1.0.0/loan-decision-agent-request.json",
+    "examples/valid/agent-output/v1.0.0/loan-decision-agent-result--failed-retryable.json",
+    "examples/valid/agent-output/v1.0.0/loan-decision-agent-result.json"
+  ]
+}

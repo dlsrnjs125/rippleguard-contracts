@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.rippleguard.dev/agent-output/phase-2-decision-envelope.v1.0.0.schema.json",
+  "title": "Phase 2 Decision Envelope",
+  "description": "Governance-facing envelope around the Phase 2 Loan Decision Agent result. Success requires a proposal and SHAP reference; failure forbids a proposal.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "decisionCaseId": { "type": "string", "minLength": 1 },
+    "evaluationRunId": { "type": "string", "format": "uuid" },
+    "agentRunId": { "type": "string", "format": "uuid" },
+    "attemptId": { "type": "integer", "minimum": 1 },
+    "requestIdempotencyKey": { "type": "string", "minLength": 16, "maxLength": 160 },
+    "result": { "$ref": "loan-decision-agent-result.v1.0.0.schema.json" }
+  },
+  "required": ["schemaVersion", "decisionCaseId", "evaluationRunId", "agentRunId", "attemptId", "requestIdempotencyKey", "result"],
+  "additionalProperties": false
+}

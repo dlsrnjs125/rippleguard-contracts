@@ -36,6 +36,30 @@ EVENT_ENVELOPE_FIELDS = {
     "eventId", "eventType", "schemaVersion", "occurredAt", "producer",
     "applicationId", "caseId", "evaluationRunId", "correlationId", "causationId", "payload",
 }
+PHASE2_FAILURE_CLASSIFICATIONS = {
+    "FEATURE_SCHEMA_VERSION_UNSUPPORTED": {"VALIDATION_REQUIRED"},
+    "FEATURE_REQUIRED_MISSING": {"VALIDATION_REQUIRED"},
+    "FEATURE_UNKNOWN": {"VALIDATION_REQUIRED"},
+    "FEATURE_TYPE_INVALID": {"VALIDATION_REQUIRED"},
+    "FEATURE_VALUE_OUT_OF_RANGE": {"VALIDATION_REQUIRED"},
+    "SNAPSHOT_NOT_FOUND": {"NON_RETRYABLE"},
+    "SNAPSHOT_LOOKUP_TEMPORARY_FAILURE": {"RETRYABLE"},
+    "SNAPSHOT_DIGEST_MISMATCH": {"BLOCKED"},
+    "SNAPSHOT_SCHEMA_UNSUPPORTED": {"VALIDATION_REQUIRED"},
+    "MODEL_MANIFEST_NOT_FOUND": {"BLOCKED"},
+    "MODEL_ARTIFACT_NOT_FOUND": {"BLOCKED"},
+    "MODEL_ARTIFACT_DIGEST_MISMATCH": {"BLOCKED"},
+    "MODEL_VERSION_UNSUPPORTED": {"VALIDATION_REQUIRED"},
+    "AGENT_TIMEOUT": {"RETRYABLE", "VALIDATION_REQUIRED"},
+    "AGENT_RUNTIME_TEMPORARY_FAILURE": {"RETRYABLE"},
+    "RETRY_EXHAUSTED": {"VALIDATION_REQUIRED"},
+    "DUPLICATE_REQUEST": {"NON_RETRYABLE"},
+    "AGENT_RUN_INPUT_CONFLICT": {"BLOCKED"},
+    "AGENT_RUN_RESULT_CONFLICT": {"BLOCKED"},
+    "SHAP_CALCULATION_FAILED": {"VALIDATION_REQUIRED"},
+    "CONTRACT_VALIDATION_FAILED": {"VALIDATION_REQUIRED"},
+    "AUDIT_PUBLICATION_FAILED": {"RETRYABLE", "BLOCKED"},
+}
 
 
 def json_files(directory: Path) -> list[Path]:
@@ -167,6 +191,8 @@ def build_semantic_context(
     context: dict[str, Any] = {
         "events": {}, "decisions": {}, "commands": {}, "runs": {},
         "risk_signals": {}, "evidence_requests": {},
+        "phase2_requests": {}, "phase2_results": {}, "phase2_manifests": {},
+        "phase2_agent_result_audit_events": {},
         "causation_edges": causation_edges or set(),
     }
     for instance in instances:
@@ -186,6 +212,20 @@ def build_semantic_context(
             register_unique(context["commands"], payload.get("commandId"), payload, "DUPLICATE_COMMAND_ID", failures)
         if instance.get("eventType") == "governance.evidence.requested.v1":
             register_unique(context["evidence_requests"], payload.get("requestId"), payload, "DUPLICATE_EVIDENCE_REQUEST_ID", failures)
+        if instance.get("modelType") == "TABULAR" and instance.get("modelVersion"):
+            register_unique(context["phase2_manifests"], instance.get("modelVersion"), instance, "DUPLICATE_PHASE2_MODEL_MANIFEST", failures)
+        if instance.get("agentType") == "LOAN_DECISION_AGENT" and instance.get("snapshotReference"):
+            register_unique(context["phase2_requests"], instance.get("agentRunId"), instance, "DUPLICATE_PHASE2_AGENT_REQUEST", failures)
+        if instance.get("resultStatus") in {"COMPLETED", "FAILED"} and isinstance(instance.get("agentRun"), dict):
+            context["phase2_results"].setdefault(instance["agentRun"].get("agentRunId"), []).append(instance)
+        if instance.get("eventType") == "governance.agent-result.validated.v1":
+            register_unique(
+                context["phase2_agent_result_audit_events"],
+                f"{payload.get('agentRunId')}:{payload.get('attemptId')}",
+                instance,
+                "DUPLICATE_PHASE2_AGENT_RESULT_AUDIT_EVENT",
+                failures,
+            )
     return context, failures
 
 
@@ -318,6 +358,51 @@ def semantic_errors(instance: Any, context: dict[str, Any] | None = None) -> lis
         if instance.get("subjectType") == "TRANSACTION" and "CUSTOMER_CREDIT_RISK_ASSESSMENT" in permitted:
             failures.append("TRANSACTION_SIGNAL_CUSTOMER_USE")
 
+    if instance.get("schemaVersion") == "1.0.0" and "featureOrder" in instance and "features" in instance:
+        ordered = instance.get("featureOrder", [])
+        feature_names = [item.get("name") for item in instance.get("features", []) if isinstance(item, dict)]
+        if ordered != feature_names:
+            failures.append("PHASE2_FEATURE_ORDER_MISMATCH")
+
+    if instance.get("agentType") == "LOAN_DECISION_AGENT" and instance.get("snapshotReference"):
+        feature_payload = instance.get("featurePayload")
+        if isinstance(feature_payload, dict) and instance.get("featureSchemaVersion") != feature_payload.get("featureSchemaVersion"):
+            failures.append("PHASE2_REQUEST_FEATURE_SCHEMA_MISMATCH")
+
+    if instance.get("resultStatus") in {"COMPLETED", "FAILED"}:
+        agent_run = instance.get("agentRun", {})
+        if agent_run.get("decisionCaseId") and agent_run.get("decisionCaseId") != instance.get("snapshotReference", {}).get("decisionCaseId", agent_run.get("decisionCaseId")):
+            pass
+        if instance.get("resultStatus") == "COMPLETED":
+            proposal = instance.get("proposal", {})
+            if isinstance(proposal, dict) and proposal:
+                compared = ("modelVersion", "featureSchemaVersion", "thresholdVersion")
+                for field in compared:
+                    if proposal.get(field) != instance.get(field):
+                        failures.append(f"PHASE2_COMPLETED_PROPOSAL_{field.upper()}_MISMATCH")
+            if not instance.get("explanationRef") or not instance.get("explanationDigest"):
+                failures.append("PHASE2_COMPLETED_RESULT_MISSING_EXPLANATION")
+        if instance.get("resultStatus") == "FAILED":
+            failure = instance.get("failure", {})
+            allowed = PHASE2_FAILURE_CLASSIFICATIONS.get(failure.get("reasonCode"))
+            if allowed is None:
+                failures.append("PHASE2_FAILURE_REASON_UNKNOWN")
+            elif failure.get("classification") not in allowed:
+                failures.append("PHASE2_FAILURE_CLASSIFICATION_MISMATCH")
+
+    if instance.get("schemaVersion") == "1.0.0" and "result" in instance and {"agentRunId", "attemptId"}.issubset(instance):
+        result = instance.get("result", {})
+        agent_run = result.get("agentRun", {}) if isinstance(result, dict) else {}
+        for field in ("decisionCaseId", "evaluationRunId", "agentRunId", "attemptId", "requestIdempotencyKey"):
+            if instance.get(field) != agent_run.get(field):
+                failures.append(f"PHASE2_DECISION_ENVELOPE_{field.upper()}_MISMATCH")
+
+    if event_type == "governance.agent-result.validated.v1":
+        if instance.get("producer") != "governance-service":
+            failures.append("PHASE2_AUDIT_EVENT_PRODUCER_NOT_GOVERNANCE")
+        if payload.get("validationOutcome") == "VALIDATED" and "SCHEMA_VALID" not in set(payload.get("validationReasonCodes", [])):
+            failures.append("PHASE2_AUDIT_VALIDATED_WITHOUT_SCHEMA_VALID")
+
     if context is None:
         return failures
 
@@ -432,6 +517,37 @@ def semantic_errors(instance: Any, context: dict[str, Any] | None = None) -> lis
                 pass
             if previous.get("status") not in {"COMPLETED", "BLOCKED", "FAILED", "CANCELLED"}:
                 failures.append("EVALUATION_RUN_SUPERSEDES_NON_TERMINAL")
+
+    if instance.get("modelType") == "TABULAR":
+        # Manifest object checks are mostly structural; scenario checks compare request/result values to it.
+        pass
+
+    if instance.get("agentType") == "LOAN_DECISION_AGENT" and instance.get("snapshotReference"):
+        manifest = context["phase2_manifests"].get(instance.get("modelVersion"))
+        if manifest is not None:
+            if manifest.get("featureSchemaVersion") != instance.get("featureSchemaVersion"):
+                failures.append("PHASE2_REQUEST_MANIFEST_FEATURE_SCHEMA_MISMATCH")
+            if manifest.get("modelBinaryArtifactDigest") != instance.get("modelArtifactDigest"):
+                failures.append("PHASE2_REQUEST_MANIFEST_ARTIFACT_DIGEST_MISMATCH")
+            if manifest.get("thresholdVersion") != instance.get("thresholdVersion"):
+                failures.append("PHASE2_REQUEST_MANIFEST_THRESHOLD_MISMATCH")
+
+    if instance.get("resultStatus") in {"COMPLETED", "FAILED"}:
+        agent_run = instance.get("agentRun", {})
+        request = context["phase2_requests"].get(agent_run.get("agentRunId"))
+        if request is not None:
+            immutable_fields = ("decisionCaseId", "evaluationRunId", "requestIdempotencyKey", "featureSchemaVersion", "modelVersion", "modelArtifactDigest", "thresholdVersion")
+            for field in immutable_fields:
+                expected = request.get(field) if field != "requestIdempotencyKey" else request.get("requestIdempotencyKey")
+                actual = agent_run.get(field) if field in {"decisionCaseId", "evaluationRunId", "requestIdempotencyKey"} else instance.get(field)
+                if expected != actual:
+                    failures.append(f"PHASE2_AGENT_RUN_{field.upper()}_MISMATCH")
+            if request.get("snapshotReference", {}).get("snapshotDigest") != instance.get("snapshotReference", {}).get("snapshotDigest"):
+                failures.append("PHASE2_AGENT_RUN_SNAPSHOT_DIGEST_MISMATCH")
+        manifest = context["phase2_manifests"].get(instance.get("modelVersion"))
+        if manifest is not None and manifest.get("modelBinaryArtifactDigest") != instance.get("modelArtifactDigest"):
+            failures.append("PHASE2_RESULT_MANIFEST_ARTIFACT_DIGEST_MISMATCH")
+
     return failures
 
 
@@ -446,6 +562,64 @@ def supersession_graph_errors(context: dict[str, Any]) -> list[str]:
             seen.add(current)
             current = graph[current]
     return []
+
+
+def phase2_context_errors(context: dict[str, Any]) -> list[str]:
+    failures: list[str] = []
+    requests_by_key: dict[str, Any] = {}
+    for request in context.get("phase2_requests", {}).values():
+        key = request.get("requestIdempotencyKey")
+        if not key:
+            continue
+        immutable = (
+            request.get("decisionCaseId"),
+            request.get("evaluationRunId"),
+            request.get("agentType"),
+            request.get("snapshotReference", {}).get("snapshotDigest"),
+            request.get("featureSchemaVersion"),
+            request.get("modelVersion"),
+            request.get("modelArtifactDigest"),
+            request.get("thresholdVersion"),
+        )
+        previous = requests_by_key.get(key)
+        if previous is None:
+            requests_by_key[key] = immutable
+        elif previous != immutable:
+            failures.append("PHASE2_IDEMPOTENCY_KEY_INPUT_CONFLICT")
+
+    for agent_run_id, results in context.get("phase2_results", {}).items():
+        if not agent_run_id or not results:
+            continue
+        immutable_values = {
+            (
+                result.get("snapshotReference", {}).get("snapshotDigest"),
+                result.get("featureSchemaVersion"),
+                result.get("modelVersion"),
+                result.get("modelArtifactDigest"),
+                result.get("thresholdVersion"),
+            )
+            for result in results
+        }
+        if len(immutable_values) > 1:
+            failures.append("PHASE2_AGENT_RUN_INPUT_CONFLICT")
+        completed_fingerprints = {
+            json.dumps(result.get("proposal", {}), sort_keys=True)
+            for result in results
+            if result.get("resultStatus") == "COMPLETED"
+        }
+        if len(completed_fingerprints) > 1:
+            failures.append("PHASE2_AGENT_RUN_RESULT_CONFLICT")
+
+    for event in context.get("phase2_agent_result_audit_events", {}).values():
+        payload = event.get("payload", {})
+        matching_result = False
+        for result in context.get("phase2_results", {}).get(payload.get("agentRunId"), []):
+            if result.get("agentRun", {}).get("attemptId") == payload.get("attemptId"):
+                matching_result = True
+                break
+        if not matching_result:
+            failures.append("PHASE2_AUDIT_RESULT_REFERENCE_NOT_FOUND")
+    return failures
 
 
 def versioned_schema_metadata(path: Path) -> tuple[str, tuple[int, int, int]] | None:
@@ -623,7 +797,10 @@ def main() -> int:
             failures.append(f"missing schema for valid example {example.relative_to(ROOT)}")
             continue
         errors = errors_for(loaded[example], loaded[schema_path], registry)
-        if schema_path.parent == SCHEMAS / "commands":
+        if schema_path.name in {
+            "loan-decision-command.v1.0.0.schema.json",
+            "phase-1-loan-decision-command-profile.v1.0.0.schema.json",
+        }:
             errors.extend(errors_for(loaded[example], loaded[command_profile_path], registry))
         semantic = semantic_errors(loaded[example])
         if errors or semantic:
@@ -636,7 +813,7 @@ def main() -> int:
         spec = scenario_specs[name]
         context, context_failures = build_semantic_context(instances, spec["causation_edges"])
         scenario_contexts[name] = context
-        scenario_errors = context_failures + supersession_graph_errors(context)
+        scenario_errors = context_failures + supersession_graph_errors(context) + phase2_context_errors(context)
         for instance in instances:
             scenario_errors.extend(semantic_errors(instance, context))
             if isinstance(instance, dict) and instance.get("eventType") in spec["forbidden_event_types"]:
@@ -669,7 +846,7 @@ def main() -> int:
                 upgraded_context, context_failures = build_semantic_context(
                     scenario_instances, spec["causation_edges"]
                 )
-                semantic.extend(context_failures + supersession_graph_errors(upgraded_context))
+                semantic.extend(context_failures + supersession_graph_errors(upgraded_context) + phase2_context_errors(upgraded_context))
                 semantic.extend(semantic_errors(upgraded, upgraded_context))
             compatibility_checks += 1
             if schema_errors or semantic:
@@ -695,7 +872,7 @@ def main() -> int:
         context = scenario_contexts.get(scenario_name) if scenario_name else None
         semantic = semantic_errors(loaded[example], context)
         if context is not None:
-            semantic.extend(supersession_graph_errors(context))
+            semantic.extend(supersession_graph_errors(context) + phase2_context_errors(context))
         if not schema_errors and not semantic:
             failures.append(f"invalid example unexpectedly passed {example.relative_to(ROOT)}")
             continue

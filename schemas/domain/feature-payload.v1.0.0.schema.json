@@ -1,0 +1,46 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.rippleguard.dev/domain/feature-payload.v1.0.0.schema.json",
+  "title": "Phase 2 Feature Payload",
+  "description": "Materialized feature values for the Phase 2 Loan Decision Agent. Extra features are rejected.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "featureSchemaVersion": { "const": "phase-2-loan-features.v1.0.0" },
+    "features": {
+      "type": "object",
+      "properties": {
+        "annualIncome": { "type": "number", "minimum": 0, "maximum": 1000000000 },
+        "monthlyIncomeMean": { "type": "number", "minimum": 0, "maximum": 100000000 },
+        "monthlyIncomeVolatility": { "type": "number", "minimum": 0, "maximum": 10 },
+        "debtToIncomeRatio": { "type": "number", "minimum": 0, "maximum": 5 },
+        "existingDebtAmount": { "type": "number", "minimum": 0, "maximum": 1000000000 },
+        "delinquencyCount": { "type": "integer", "minimum": 0, "maximum": 120 },
+        "platformSettlementMonths": { "type": "integer", "minimum": 0, "maximum": 240 },
+        "platformSettlementMean": { "type": "number", "minimum": 0, "maximum": 100000000 },
+        "platformSettlementVolatility": { "type": "number", "minimum": 0, "maximum": 10 },
+        "contractDurationMonths": { "type": "integer", "minimum": 0, "maximum": 240 },
+        "incomeDeclarationAvailable": { "type": "boolean" },
+        "telecomPaymentDelinquencyCount": { "type": "integer", "minimum": 0, "maximum": 120 }
+      },
+      "required": [
+        "annualIncome",
+        "monthlyIncomeMean",
+        "monthlyIncomeVolatility",
+        "debtToIncomeRatio",
+        "existingDebtAmount",
+        "delinquencyCount",
+        "platformSettlementMonths",
+        "platformSettlementMean",
+        "platformSettlementVolatility",
+        "contractDurationMonths",
+        "incomeDeclarationAvailable",
+        "telecomPaymentDelinquencyCount"
+      ],
+      "additionalProperties": false
+    },
+    "featurePayloadDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" }
+  },
+  "required": ["schemaVersion", "featureSchemaVersion", "features", "featurePayloadDigest"],
+  "additionalProperties": false
+}

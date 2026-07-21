@@ -1,0 +1,12 @@
+{
+  "schemaVersion": "1.0.0",
+  "decisionCaseId": "case-2001",
+  "evaluationRunId": "30000000-0000-4000-8000-000000002001",
+  "agentRunId": "60000000-0000-4000-8000-000000002001",
+  "attemptId": 1,
+  "agentType": "LOAN_DECISION_AGENT",
+  "requestIdempotencyKey": "loan-agent-case-2001-v1",
+  "startedAt": "2026-07-21T10:10:00+09:00",
+  "completedAt": "2026-07-21T10:10:03+09:00",
+  "runtimeVersion": "agent-runtime.v1.0.0"
+}

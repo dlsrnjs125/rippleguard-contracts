@@ -1,0 +1,19 @@
+{
+  "schemaVersion": "2.0.0",
+  "evaluationRunId": "30000000-0000-4000-8000-000000002001",
+  "decisionCaseId": "case-2001",
+  "inputSnapshotVersion": "v1",
+  "executionPlanVersion": "phase2-loan-decision.v1",
+  "componentVersions": [
+    { "componentType": "MODEL", "componentName": "phase2-loan-xgboost", "version": "loan-model.v1.0.0" },
+    { "componentType": "PROMPT", "componentName": "phase2-no-prompt", "version": "not-used" },
+    { "componentType": "TOOL", "componentName": "tabular-feature-preprocessor", "version": "preprocess.v1.0.0" },
+    { "componentType": "AGENT", "componentName": "loan-decision-agent", "version": "agent.v1.0.0" }
+  ],
+  "policyInputVersion": "phase2-no-opa",
+  "policyBundleVersion": "phase2-no-opa",
+  "status": "COMPLETED",
+  "supersedesRunId": null,
+  "createdAt": "2026-07-21T10:09:58+09:00",
+  "completedAt": "2026-07-21T10:10:04+09:00"
+}

@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://schemas.rippleguard.dev/domain/feature-schema.v1.0.0.schema.json",
+  "title": "Phase 2 Feature Schema",
+  "description": "Versioned tabular feature contract for the Loan Decision Agent. Unknown features are rejected and feature ordering is explicit.",
+  "type": "object",
+  "properties": {
+    "schemaVersion": { "const": "1.0.0" },
+    "featureSchemaVersion": { "type": "string", "pattern": "^phase-2-loan-features\\.v[1-9][0-9]*\\.[0-9]+\\.[0-9]+$" },
+    "featureOrder": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "annualIncome",
+          "monthlyIncomeMean",
+          "monthlyIncomeVolatility",
+          "debtToIncomeRatio",
+          "existingDebtAmount",
+          "delinquencyCount",
+          "platformSettlementMonths",
+          "platformSettlementMean",
+          "platformSettlementVolatility",
+          "contractDurationMonths",
+          "incomeDeclarationAvailable",
+          "telecomPaymentDelinquencyCount"
+        ]
+      },
+      "minItems": 12,
+      "maxItems": 12,
+      "uniqueItems": true
+    },
+    "features": {
+      "type": "array",
+      "minItems": 12,
+      "maxItems": 12,
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "valueType": { "type": "string", "enum": ["integer", "number", "boolean"] },
+          "required": { "type": "boolean" },
+          "nullable": { "const": false },
+          "unit": { "type": "string", "enum": ["KRW", "RATIO", "COUNT", "MONTHS", "BOOLEAN"] },
+          "minimum": { "type": "number" },
+          "maximum": { "type": "number" },
+          "description": { "type": "string", "minLength": 1 },
+          "sourceCategory": { "type": "string", "enum": ["APPLICANT_DECLARED", "LOAN_SYSTEM", "SETTLEMENT_HISTORY", "TELECOM_HISTORY", "DERIVED"] },
+          "allowedUse": { "const": "LOAN_PROPOSAL_GENERATION" },
+          "missingValuePolicy": { "type": "string", "enum": ["REJECT_REQUEST", "USE_FALSE_FOR_BOOLEAN"] },
+          "preprocessingExpectation": { "type": "string", "minLength": 1 },
+          "sensitiveDataClassification": { "type": "string", "enum": ["NON_PII_DERIVED", "PURPOSE_LIMITED_FINANCIAL", "PURPOSE_LIMITED_TELECOM"] }
+        },
+        "required": ["name", "valueType", "required", "nullable", "unit", "description", "sourceCategory", "allowedUse", "missingValuePolicy", "preprocessingExpectation", "sensitiveDataClassification"],
+        "additionalProperties": false
+      }
+    },
+    "additionalPropertiesPolicy": { "const": "REJECT" }
+  },
+  "required": ["schemaVersion", "featureSchemaVersion", "featureOrder", "features", "additionalPropertiesPolicy"],
+  "additionalProperties": false
+}
