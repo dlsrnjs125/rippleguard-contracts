@@ -127,7 +127,14 @@ Python Agent Runtime and Java Governance implementations must match this vector 
 - Loan Service Snapshot compatibility is validated through the Snapshot Reference contract here; service code changes, if required, are handled in a later repository PR.
 - Existing Evaluation Run v1/v2 contracts still include Prompt component provenance for Phase 1 compatibility. Phase 2 does not add Local LLM or Prompt contracts.
 - `trainingCodeCommit` is currently a Git SHA-1 commit reference. Non-Git or SHA-256 source provenance can be introduced in a later schema version if needed.
-- `runtimeImageDigest` remains required in `tabular-model-manifest.v1.0.0`, but final ownership needs a separate decision. If the model manifest owns the exact runtime image digest, an image build can produce a digest only after the manifest exists, while rebuilding after manifest mutation can change the digest again. Candidate direction: the Model Manifest owns model, training, runtime constraint and dependency-lock provenance, while the Infra Release Manifest owns the exact runtime image digest. Expected separate branch: `fix/phase-2-runtime-image-provenance-contract`.
+
+### Follow-up: Runtime Image Digest Ownership
+
+- Follow-up Repository: `rippleguard-contracts`
+- Required decision: `runtimeImageDigest` ownership
+- Candidate direction: Model Manifest owns model, training, runtime constraint and dependency-lock provenance; Infra Release Manifest owns the exact runtime image digest.
+- Compatibility impact: changing `tabular-model-manifest.v1.0.0` ownership or required fields may be breaking and requires a versioned contract decision.
+- Expected separate branch: `fix/phase-2-runtime-image-provenance-contract`
 
 ## Follow-up Repository
 

@@ -604,6 +604,19 @@ def semantic_errors(instance: Any, context: dict[str, Any] | None = None) -> lis
                     failures.append("CAUSATION_DECISION_MISMATCH")
                 if event_type == "loan.decision.finalized.v1" and cause_payload.get("commandId") != payload.get("commandId"):
                     failures.append("CAUSATION_COMMAND_MISMATCH")
+                if event_type == "governance.agent-result.validated.v1":
+                    if cause.get("eventType") != "agent.evaluation.requested.v1":
+                        failures.append("PHASE2_AUDIT_CAUSATION_EVENT_TYPE_INVALID")
+                    if (
+                        cause.get("evaluationRunId") != instance.get("evaluationRunId")
+                        or cause_payload.get("evaluationRunId") != payload.get("evaluationRunId")
+                    ):
+                        failures.append("PHASE2_AUDIT_CAUSATION_EVALUATION_RUN_MISMATCH")
+                    if (
+                        cause.get("caseId") != instance.get("caseId")
+                        or cause_payload.get("decisionCaseId") != payload.get("decisionCaseId")
+                    ):
+                        failures.append("PHASE2_AUDIT_CAUSATION_CASE_MISMATCH")
 
     if event_type == "agent.evaluation.requested.v1":
         run = context["runs"].get(payload.get("evaluationRunId"))
