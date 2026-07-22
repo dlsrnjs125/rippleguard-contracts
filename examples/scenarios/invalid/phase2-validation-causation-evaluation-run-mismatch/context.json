@@ -1,0 +1,16 @@
+{
+  "name": "phase2-validation-causation-evaluation-run-mismatch",
+  "expectedSemanticErrors": ["PHASE2_AUDIT_CAUSATION_EVALUATION_RUN_MISMATCH"],
+  "causationEdges": [
+    { "from": "loan.application.submitted.v1", "to": "agent.evaluation.requested.v1" },
+    { "from": "agent.evaluation.requested.v1", "to": "governance.agent-result.validated.v1" }
+  ],
+  "fixtures": [
+    "examples/valid/events/v1.1.0/loan.application.submitted.v1--phase2.json",
+    "examples/valid/domain/v2.0.0/evaluation-run--phase2.json",
+    "examples/valid/events/v1.1.0/agent.evaluation.requested.v1--phase2.json",
+    "examples/valid/commands/v1.0.0/loan-decision-agent-request.json",
+    "examples/valid/agent-output/v1.0.0/loan-decision-agent-result.json",
+    "examples/invalid/events/v1.0.0/governance.agent-result.validated.v1--causation-evaluation-run-mismatch.json"
+  ]
+}

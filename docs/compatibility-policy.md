@@ -6,6 +6,8 @@ Every change must run `make validate`, retain valid fixtures for supported versi
 
 Consumers validate before processing, reject unsupported major versions, and preserve the original message for audit. Producers do not silently repurpose fields or Enum values. Event delivery guarantees do not replace application-level idempotency based on `eventId`.
 
+Event identity and domain identity are not interchangeable. `eventId` identifies one persisted Event, `causationId` points to the nearest persisted predecessor Event `eventId`, `correlationId` joins one business flow, and domain identifiers such as `agentRunId` identify business objects inside the payload. Expanding an existing v1.0.0 `causationId` contract to accept `agentRunId` is not a compatible clarification because it changes the meaning of the Event Envelope. If a future design needs Agent Run causation semantics, it requires a new contract version and scenario fixtures.
+
 Unknown failure reason codes are not backward-compatible success. Consumers must route unknown failure codes to a validation-required or blocked path unless a versioned contract explicitly defines a safe mapping.
 
 JSON Schema validation is supplemented by deterministic semantic invariants for cross-field identifiers, reference existence, Evaluation-to-Decision-to-Command consistency, Proposal-to-final mapping, Run supersession, component identity, root causation, risk-signal lifetime, and mutually exclusive purpose restrictions. The validation context rejects duplicate Event, Decision, Evaluation Run, Command, Risk Signal, and Evidence Request identifiers instead of selecting a fixture by file order.

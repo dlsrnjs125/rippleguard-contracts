@@ -93,6 +93,8 @@ Governance audit events use two provenance links:
 - `causationId` references the nearest persisted event cause, currently `agent.evaluation.requested.v1`.
 - `agentResultReference` and `agentResultDigest` reference the directly validated Agent Result payload.
 
+`causationId` must not be populated with `agentRunId`. `agentRunId` remains the Agent execution domain identity carried in the validation payload and Agent Result reference. Consumers, including Audit Replay, must reject a validation Event that reuses an Agent Run identity as Event causation.
+
 `agentResultReference` is fixed as `agent-result://{decisionCaseId}/{agentRunId}/attempt-{attemptId}`.
 
 `agentResultDigest` is SHA-256 over the full Agent Result payload using RFC 8785 JSON Canonicalization Scheme (JCS):
@@ -125,6 +127,14 @@ Python Agent Runtime and Java Governance implementations must match this vector 
 - Loan Service Snapshot compatibility is validated through the Snapshot Reference contract here; service code changes, if required, are handled in a later repository PR.
 - Existing Evaluation Run v1/v2 contracts still include Prompt component provenance for Phase 1 compatibility. Phase 2 does not add Local LLM or Prompt contracts.
 - `trainingCodeCommit` is currently a Git SHA-1 commit reference. Non-Git or SHA-256 source provenance can be introduced in a later schema version if needed.
+
+### Follow-up: Runtime Image Digest Ownership
+
+- Follow-up Repository: `rippleguard-contracts`
+- Required decision: `runtimeImageDigest` ownership
+- Candidate direction: Model Manifest owns model, training, runtime constraint and dependency-lock provenance; Infra Release Manifest owns the exact runtime image digest.
+- Compatibility impact: changing `tabular-model-manifest.v1.0.0` ownership or required fields may be breaking and requires a versioned contract decision.
+- Expected separate branch: `fix/phase-2-runtime-image-provenance-contract`
 
 ## Follow-up Repository
 

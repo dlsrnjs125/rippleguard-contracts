@@ -308,7 +308,7 @@ def build_semantic_context(
         "events": {}, "decisions": {}, "commands": {}, "runs": {},
         "risk_signals": {}, "evidence_requests": {},
         "phase2_requests": {}, "phase2_results": {}, "phase2_manifests": {},
-        "phase2_agent_result_audit_events": {},
+        "phase2_agent_result_audit_events": {}, "phase2_agent_run_ids": set(),
         "causation_edges": causation_edges or set(),
     }
     for instance in instances:
@@ -332,8 +332,13 @@ def build_semantic_context(
             register_unique(context["phase2_manifests"], instance.get("modelVersion"), instance, "DUPLICATE_PHASE2_MODEL_MANIFEST", failures)
         if instance.get("agentType") == "LOAN_DECISION_AGENT" and instance.get("snapshotReference"):
             context["phase2_requests"].setdefault(instance.get("agentRunId"), []).append(instance)
+            if instance.get("agentRunId"):
+                context["phase2_agent_run_ids"].add(instance.get("agentRunId"))
         if instance.get("resultStatus") in {"COMPLETED", "FAILED"} and isinstance(instance.get("agentRun"), dict):
             context["phase2_results"].setdefault(instance["agentRun"].get("agentRunId"), []).append(instance)
+            agent_run_id = instance["agentRun"].get("agentRunId")
+            if agent_run_id:
+                context["phase2_agent_run_ids"].add(agent_run_id)
         if instance.get("eventType") == "governance.agent-result.validated.v1":
             register_unique(
                 context["phase2_agent_result_audit_events"],
@@ -575,27 +580,43 @@ def semantic_errors(instance: Any, context: dict[str, Any] | None = None) -> lis
         return failures
 
     if event_type and instance.get("causationId") is not None:
-        cause = context["events"].get(instance["causationId"])
-        if cause is None:
-            failures.append("CAUSATION_EVENT_NOT_FOUND")
+        if instance.get("causationId") == instance.get("eventId"):
+            failures.append("CAUSATION_SELF_REFERENCE")
         else:
-            if cause.get("correlationId") != instance.get("correlationId"):
-                failures.append("CAUSATION_CORRELATION_MISMATCH")
-            try:
-                if parse_timestamp(cause["occurredAt"]) > parse_timestamp(instance["occurredAt"]):
-                    failures.append("CAUSATION_TIME_ORDER_INVALID")
-            except (KeyError, TypeError, ValueError):
-                pass
-            edge = (cause.get("eventType"), event_type)
-            if edge not in context["causation_edges"]:
-                failures.append("CAUSATION_EVENT_TYPE_INVALID")
-            cause_payload = cause.get("payload", {})
-            if event_type == "agent.evaluation.completed.v1" and cause_payload.get("evaluationRunId") != payload.get("evaluationRunId"):
-                failures.append("CAUSATION_EVALUATION_RUN_MISMATCH")
-            if event_type == "loan.decision.commanded.v1" and cause_payload.get("decisionEnvelope", {}).get("decisionId") != payload.get("decisionId"):
-                failures.append("CAUSATION_DECISION_MISMATCH")
-            if event_type == "loan.decision.finalized.v1" and cause_payload.get("commandId") != payload.get("commandId"):
-                failures.append("CAUSATION_COMMAND_MISMATCH")
+            cause = context["events"].get(instance["causationId"])
+            if cause is None:
+                failures.append("CAUSATION_EVENT_NOT_FOUND")
+            else:
+                if cause.get("correlationId") != instance.get("correlationId"):
+                    failures.append("CAUSATION_CORRELATION_MISMATCH")
+                try:
+                    if parse_timestamp(cause["occurredAt"]) > parse_timestamp(instance["occurredAt"]):
+                        failures.append("CAUSATION_TIME_ORDER_INVALID")
+                except (KeyError, TypeError, ValueError):
+                    pass
+                edge = (cause.get("eventType"), event_type)
+                if edge not in context["causation_edges"]:
+                    failures.append("CAUSATION_EVENT_TYPE_INVALID")
+                cause_payload = cause.get("payload", {})
+                if event_type == "agent.evaluation.completed.v1" and cause_payload.get("evaluationRunId") != payload.get("evaluationRunId"):
+                    failures.append("CAUSATION_EVALUATION_RUN_MISMATCH")
+                if event_type == "loan.decision.commanded.v1" and cause_payload.get("decisionEnvelope", {}).get("decisionId") != payload.get("decisionId"):
+                    failures.append("CAUSATION_DECISION_MISMATCH")
+                if event_type == "loan.decision.finalized.v1" and cause_payload.get("commandId") != payload.get("commandId"):
+                    failures.append("CAUSATION_COMMAND_MISMATCH")
+                if event_type == "governance.agent-result.validated.v1":
+                    if cause.get("eventType") != "agent.evaluation.requested.v1":
+                        failures.append("PHASE2_AUDIT_CAUSATION_EVENT_TYPE_INVALID")
+                    if (
+                        cause.get("evaluationRunId") != instance.get("evaluationRunId")
+                        or cause_payload.get("evaluationRunId") != payload.get("evaluationRunId")
+                    ):
+                        failures.append("PHASE2_AUDIT_CAUSATION_EVALUATION_RUN_MISMATCH")
+                    if (
+                        cause.get("caseId") != instance.get("caseId")
+                        or cause_payload.get("decisionCaseId") != payload.get("decisionCaseId")
+                    ):
+                        failures.append("PHASE2_AUDIT_CAUSATION_CASE_MISMATCH")
 
     if event_type == "agent.evaluation.requested.v1":
         run = context["runs"].get(payload.get("evaluationRunId"))
@@ -807,6 +828,8 @@ def phase2_context_errors(context: dict[str, Any]) -> list[str]:
 
     for event in context.get("phase2_agent_result_audit_events", {}).values():
         payload = event.get("payload", {})
+        if event.get("causationId") in context.get("phase2_agent_run_ids", set()):
+            failures.append("PHASE2_AUDIT_CAUSATION_USES_AGENT_RUN_ID")
         matching_result: dict[str, Any] | None = None
         for result in context.get("phase2_results", {}).get(payload.get("agentRunId"), []):
             if result.get("agentRun", {}).get("attemptId") == payload.get("attemptId"):
