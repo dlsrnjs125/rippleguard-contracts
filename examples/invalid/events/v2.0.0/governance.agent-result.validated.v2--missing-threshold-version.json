@@ -1,0 +1,32 @@
+{
+  "eventId": "10000000-0000-4000-8000-000000002405",
+  "eventType": "governance.agent-result.validated.v2",
+  "schemaVersion": "2.0.0",
+  "occurredAt": "2026-07-21T10:10:04+09:00",
+  "producer": "governance-service",
+  "applicationId": "10000000-0000-4000-8000-000000002001",
+  "caseId": "case-2001",
+  "evaluationRunId": "30000000-0000-4000-8000-000000002001",
+  "correlationId": "10000000-0000-4000-8000-000000002001",
+  "causationId": "10000000-0000-4000-8000-000000002200",
+  "payload": {
+    "decisionCaseId": "case-2001",
+    "evaluationRunId": "30000000-0000-4000-8000-000000002001",
+    "agentRunId": "60000000-0000-4000-8000-000000002001",
+    "attemptId": 1,
+    "validationOutcome": "VALIDATED",
+    "validationReasonCodes": ["SCHEMA_VALID", "MODEL_PROVENANCE_VALID", "SNAPSHOT_MATCHED", "SHAP_PRESENT"],
+    "snapshotId": "snapshot-2001",
+    "snapshotVersion": "v1",
+    "snapshotSchemaVersion": "1.0.0",
+    "snapshotDigest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "featureSchemaVersion": "phase-2-loan-features.v1.0.0",
+    "preprocessingVersion": "preprocess.v1.0.0",
+    "modelVersion": "loan-model.v1.0.0",
+    "modelArtifactDigest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "agentResultReference": "agent-result://case-2001/60000000-0000-4000-8000-000000002001/attempt-1",
+    "agentResultDigest": "sha256:14894f822eb1e00eada33940c2160598c8bde2865e1ddfb2959092a175e4c2fa",
+    "requestEventId": "10000000-0000-4000-8000-000000002200",
+    "validatedAt": "2026-07-21T10:10:04+09:00"
+  }
+}

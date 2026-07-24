@@ -40,6 +40,11 @@
     "shapExplainerConfig": { "type": "object", "minProperties": 1, "additionalProperties": { "type": ["string", "number", "boolean"] } },
     "pythonVersion": { "type": "string", "minLength": 1 },
     "runtimeImageDigest": { "type": "string", "pattern": "^sha256:[a-f0-9]{64}$" },
+    "manifestPublicationState": {
+      "type": "string",
+      "enum": ["TEMPLATE", "PUBLISHED"],
+      "description": "TEMPLATE manifests may carry unresolved build-time placeholders. PUBLISHED manifests are Infra-materialized release evidence and must contain the immutable runtime image digest."
+    },
     "platformArchitecture": { "type": "string", "enum": ["linux/amd64", "linux/arm64", "darwin/arm64"] },
     "threadCount": { "type": "integer", "minimum": 1 },
     "deterministicConfig": { "type": "string", "minLength": 1 },

@@ -221,6 +221,28 @@ def canonical_json(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
+def phase2_runtime_image_digest_errors(manifest: dict[str, Any]) -> list[str]:
+    state = manifest.get("manifestPublicationState", "PUBLISHED")
+    digest = manifest.get("runtimeImageDigest")
+    if state == "TEMPLATE":
+        return []
+    if not isinstance(digest, str) or not digest.startswith("sha256:"):
+        return []
+    hex_value = digest.removeprefix("sha256:")
+    failures: list[str] = []
+    if len(hex_value) == 64 and len(set(hex_value)) == 1:
+        failures.append("PHASE2_RUNTIME_IMAGE_DIGEST_PLACEHOLDER")
+    source_commit = manifest.get("trainingCodeCommit")
+    if isinstance(source_commit, str) and source_commit and source_commit in hex_value:
+        failures.append("PHASE2_RUNTIME_IMAGE_DIGEST_SOURCE_COMMIT")
+    if any(
+        isinstance(value, str) and re.search(r"\b(placeholder|candidate|unresolved)\b", value, re.IGNORECASE)
+        for value in manifest.values()
+    ):
+        failures.append("PHASE2_PUBLISHED_MANIFEST_MARKED_PLACEHOLDER")
+    return failures
+
+
 def phase2_request_immutable(request: dict[str, Any]) -> tuple[Any, ...]:
     return (
         request.get("decisionCaseId"),
@@ -339,7 +361,7 @@ def build_semantic_context(
             agent_run_id = instance["agentRun"].get("agentRunId")
             if agent_run_id:
                 context["phase2_agent_run_ids"].add(agent_run_id)
-        if instance.get("eventType") == "governance.agent-result.validated.v1":
+        if instance.get("eventType") in {"governance.agent-result.validated.v1", "governance.agent-result.validated.v2"}:
             register_unique(
                 context["phase2_agent_result_audit_events"],
                 f"{payload.get('agentRunId')}:{payload.get('attemptId')}",
@@ -543,7 +565,7 @@ def semantic_errors(instance: Any, context: dict[str, Any] | None = None) -> lis
             if instance.get(field) != agent_run.get(field):
                 failures.append(f"PHASE2_DECISION_ENVELOPE_{field.upper()}_MISMATCH")
 
-    if event_type == "governance.agent-result.validated.v1":
+    if event_type in {"governance.agent-result.validated.v1", "governance.agent-result.validated.v2"}:
         if instance.get("producer") != "governance-service":
             failures.append("PHASE2_AUDIT_EVENT_PRODUCER_NOT_GOVERNANCE")
         reason_codes = set(payload.get("validationReasonCodes", []))
@@ -575,6 +597,14 @@ def semantic_errors(instance: Any, context: dict[str, Any] | None = None) -> lis
         )
         if payload.get("agentResultReference") != expected_reference:
             failures.append("PHASE2_AUDIT_RESULT_REFERENCE_MISMATCH")
+        if event_type == "governance.agent-result.validated.v2":
+            if payload.get("requestEventId") != instance.get("causationId"):
+                failures.append("PHASE2_AUDIT_REQUEST_EVENT_CAUSATION_MISMATCH")
+            if instance.get("causationId") == payload.get("agentRunId"):
+                failures.append("PHASE2_AUDIT_CAUSATION_USES_AGENT_RUN_ID")
+
+    if instance.get("modelType") == "TABULAR":
+        failures.extend(phase2_runtime_image_digest_errors(instance))
 
     if context is None:
         return failures
@@ -604,7 +634,7 @@ def semantic_errors(instance: Any, context: dict[str, Any] | None = None) -> lis
                     failures.append("CAUSATION_DECISION_MISMATCH")
                 if event_type == "loan.decision.finalized.v1" and cause_payload.get("commandId") != payload.get("commandId"):
                     failures.append("CAUSATION_COMMAND_MISMATCH")
-                if event_type == "governance.agent-result.validated.v1":
+                if event_type in {"governance.agent-result.validated.v1", "governance.agent-result.validated.v2"}:
                     if cause.get("eventType") != "agent.evaluation.requested.v1":
                         failures.append("PHASE2_AUDIT_CAUSATION_EVENT_TYPE_INVALID")
                     if (
@@ -706,10 +736,6 @@ def semantic_errors(instance: Any, context: dict[str, Any] | None = None) -> lis
                 pass
             if previous.get("status") not in {"COMPLETED", "BLOCKED", "FAILED", "CANCELLED"}:
                 failures.append("EVALUATION_RUN_SUPERSEDES_NON_TERMINAL")
-
-    if instance.get("modelType") == "TABULAR":
-        # Manifest object checks are mostly structural; scenario checks compare request/result values to it.
-        pass
 
     if instance.get("agentType") == "LOAN_DECISION_AGENT" and instance.get("snapshotReference"):
         manifest = context["phase2_manifests"].get(instance.get("modelVersion"))
