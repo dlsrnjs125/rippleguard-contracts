@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://schemas.rippleguard.dev/events/governance.agent-result.validated.v2.0.0.schema.json",
   "title": "Governance Agent Result Validated v2.0.0",
-  "description": "Provenance-complete Governance-owned audit event emitted after validating a Phase 2 Agent result. The causationId must reference the persisted agent.evaluation.requested.v1 event.",
+  "description": "Provenance-complete Governance-owned audit event emitted after Governance validates a Phase 2 Agent result or records an Agent attempt failure before a result is produced. The causationId must reference the persisted agent.evaluation.requested.v1 event.",
   "allOf": [
     { "$ref": "../common/phase-1-event-envelope-profile.v1.0.0.schema.json" },
     {

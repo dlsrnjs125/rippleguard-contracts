@@ -93,7 +93,7 @@ The validator fixes reason-code mappings for Phase 2. Unknown failure codes must
 
 `runtimeImageDigest` means the OCI image manifest digest for the exact runtime image. A local mutable tag, Docker image ID or archive hash is not accepted as the published runtime baseline.
 
-The committed source manifest can use the template contract because the runtime image digest is not knowable until after the Infra image build. The Infra release materialization produces the published `tabular-model-manifest.v1.0.0` by injecting the exact immutable OCI digest. The committed template is not release evidence.
+The committed source manifest can use the template contract because the runtime image digest is not knowable until after the Infra image build. Template manifests do not require `runtimeImageDigest`; if an existing source artifact still carries a placeholder digest, it remains template-only metadata. The Infra release materialization produces the published `tabular-model-manifest.v1.0.0` by injecting the exact immutable OCI digest. The committed template is not release evidence.
 
 `runtimeImageDigest` is not:
 
