@@ -1,6 +1,7 @@
 {
   "schemaVersion": "1.0.0",
   "modelType": "TABULAR",
+  "manifestPublicationState": "TEMPLATE",
   "modelName": "phase2-loan-xgboost",
   "modelVersion": "loan-model-template.v1.0.0",
   "framework": "xgboost",
@@ -25,7 +26,6 @@
   "shapExplainerConfig": { "algorithm": "tree", "checkAdditivity": true },
   "pythonVersion": "3.12.4",
   "runtimeImageDigest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
-  "manifestPublicationState": "TEMPLATE",
   "platformArchitecture": "linux/arm64",
   "threadCount": 1,
   "deterministicConfig": "single-threaded-predictor",

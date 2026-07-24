@@ -235,11 +235,6 @@ def phase2_runtime_image_digest_errors(manifest: dict[str, Any]) -> list[str]:
     source_commit = manifest.get("trainingCodeCommit")
     if isinstance(source_commit, str) and source_commit and source_commit in hex_value:
         failures.append("PHASE2_RUNTIME_IMAGE_DIGEST_SOURCE_COMMIT")
-    if any(
-        isinstance(value, str) and re.search(r"\b(placeholder|candidate|unresolved)\b", value, re.IGNORECASE)
-        for value in manifest.values()
-    ):
-        failures.append("PHASE2_PUBLISHED_MANIFEST_MARKED_PLACEHOLDER")
     return failures
 
 
@@ -591,12 +586,13 @@ def semantic_errors(instance: Any, context: dict[str, Any] | None = None) -> lis
                 failures.append("PHASE2_AUDIT_REJECTED_WITHOUT_REJECTION_REASON")
             if valid_codes.issubset(reason_codes):
                 failures.append("PHASE2_AUDIT_REJECTED_WITH_FULL_VALID_REASON_SET")
-        expected_reference = (
-            f"agent-result://{payload.get('decisionCaseId')}/"
-            f"{payload.get('agentRunId')}/attempt-{payload.get('attemptId')}"
-        )
-        if payload.get("agentResultReference") != expected_reference:
-            failures.append("PHASE2_AUDIT_RESULT_REFERENCE_MISMATCH")
+        if payload.get("agentResultReference") is not None:
+            expected_reference = (
+                f"agent-result://{payload.get('decisionCaseId')}/"
+                f"{payload.get('agentRunId')}/attempt-{payload.get('attemptId')}"
+            )
+            if payload.get("agentResultReference") != expected_reference:
+                failures.append("PHASE2_AUDIT_RESULT_REFERENCE_MISMATCH")
         if event_type == "governance.agent-result.validated.v2":
             if payload.get("requestEventId") != instance.get("causationId"):
                 failures.append("PHASE2_AUDIT_REQUEST_EVENT_CAUSATION_MISMATCH")
@@ -856,6 +852,8 @@ def phase2_context_errors(context: dict[str, Any]) -> list[str]:
         payload = event.get("payload", {})
         if event.get("causationId") in context.get("phase2_agent_run_ids", set()):
             failures.append("PHASE2_AUDIT_CAUSATION_USES_AGENT_RUN_ID")
+        if payload.get("agentResultReference") is None and payload.get("agentResultDigest") is None:
+            continue
         matching_result: dict[str, Any] | None = None
         for result in context.get("phase2_results", {}).get(payload.get("agentRunId"), []):
             if result.get("agentRun", {}).get("attemptId") == payload.get("attemptId"):

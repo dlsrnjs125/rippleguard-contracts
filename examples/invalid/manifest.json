@@ -127,6 +127,8 @@
     { "fixture": "events/v2.0.0/governance.agent-result.validated.v2--missing-threshold-version.json", "expectedType": "required", "expectedCode": "thresholdVersion" },
     { "fixture": "events/v2.0.0/governance.agent-result.validated.v2--agent-run-causation.json", "expectedType": "semantic", "expectedCode": "PHASE2_AUDIT_CAUSATION_USES_AGENT_RUN_ID" },
     { "fixture": "events/v2.0.0/governance.agent-result.validated.v2--request-event-causation-mismatch.json", "expectedType": "semantic", "expectedCode": "PHASE2_AUDIT_REQUEST_EVENT_CAUSATION_MISMATCH" },
+    { "fixture": "events/v2.0.0/governance.agent-result.validated.v2--validated-missing-agent-result.json", "expectedType": "oneOf", "expectedCode": "not valid" },
+    { "fixture": "events/v2.0.0/governance.agent-result.validated.v2--rejected-result-invalid-without-result.json", "expectedType": "oneOf", "expectedCode": "not valid" },
     { "fixture": "agent-output/v1.0.0/loan-proposal--final-loan-status.json", "expectedType": "additionalProperties", "expectedCode": "finalLoanStatus" },
     { "fixture": "agent-output/v1.0.0/loan-decision-agent-result--local-llm-field.json", "expectedType": "oneOf", "expectedCode": "localLlmPromptVersion" },
     { "fixture": "agent-output/v1.0.0/loan-decision-agent-result--unsupported-major-schema-version.json", "expectedType": "oneOf", "expectedCode": "schemaVersion" }

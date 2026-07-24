@@ -89,9 +89,11 @@ The validator fixes reason-code mappings for Phase 2. Unknown failure codes must
 
 `tabular-model-manifest.v1.0.0` requires framework, feature schema, preprocessing, dataset, training commit, random seed, threshold, artifact digest, SHAP explainer, runtime and dependency metadata. Model binary artifacts are referenced by immutable URI and digest; binaries are not stored in this repository.
 
+`tabular-model-manifest-template.v1.0.0` is a separate source-artifact contract for Agent Runtime repositories. It is intentionally not the same `$id` as the published manifest contract, so strict v1 consumers do not see new properties under an unchanged schema identity.
+
 `runtimeImageDigest` means the OCI image manifest digest for the exact runtime image. A local mutable tag, Docker image ID or archive hash is not accepted as the published runtime baseline.
 
-The committed source manifest can be a `TEMPLATE` because the runtime image digest is not knowable until after the Infra image build. The Infra release materialization produces the `PUBLISHED` manifest by injecting the exact immutable OCI digest. The committed template is not release evidence.
+The committed source manifest can use the template contract because the runtime image digest is not knowable until after the Infra image build. The Infra release materialization produces the published `tabular-model-manifest.v1.0.0` by injecting the exact immutable OCI digest. The committed template is not release evidence.
 
 `runtimeImageDigest` is not:
 
@@ -100,7 +102,7 @@ The committed source manifest can be a `TEMPLATE` because the runtime image dige
 - a placeholder such as all `f`, all `0` or repeated hex
 - a candidate value copied into release evidence before image publication
 
-Contracts validation permits placeholders only in `manifestPublicationState: "TEMPLATE"` fixtures and rejects placeholder or source-commit-derived values in `manifestPublicationState: "PUBLISHED"` fixtures.
+Contracts validation permits placeholders only in `tabular-model-manifest-template.v1.0.0` fixtures and rejects placeholder or training-code-commit-derived values in published `tabular-model-manifest.v1.0.0` fixtures. Runtime source commit and OCI revision cross-checking belongs to Infra release materialization because Contracts alone does not know the service image build context.
 
 ## Audit Result Reference
 
@@ -110,6 +112,8 @@ Governance audit events use two provenance links:
 - `agentResultReference` and `agentResultDigest` reference the directly validated Agent Result payload.
 
 For `governance.agent-result.validated.v2`, `payload.requestEventId` must equal the envelope `causationId`. Both fields identify the persisted `agent.evaluation.requested.v1` Event that caused the validation. `causationId` must not be populated with `agentRunId`. `agentRunId` remains the Agent execution domain identity carried in the validation payload and Agent Result reference. Consumers, including Audit Replay, must reject a validation Event that reuses an Agent Run identity as Event causation.
+
+In v2, `VALIDATED` always requires `agentResultReference` and `agentResultDigest`. `REJECTED` distinguishes two paths: when an Agent Result was produced and failed Governance validation, those fields remain required; when the Agent failed before producing a result, `AGENT_FAILURE_RECORDED` can be emitted without synthetic Agent Result identifiers.
 
 `agentResultReference` is fixed as `agent-result://{decisionCaseId}/{agentRunId}/attempt-{attemptId}`.
 
