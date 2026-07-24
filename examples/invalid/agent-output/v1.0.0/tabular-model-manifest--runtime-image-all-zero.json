@@ -24,7 +24,7 @@
   "shapExplainerVersion": "shap.v0.46.0",
   "shapExplainerConfig": { "algorithm": "tree", "checkAdditivity": true },
   "pythonVersion": "3.12.4",
-  "runtimeImageDigest": "sha256:1234567890abcdef1234567890abcdef1234567890abcdef1234567890abcdef",
+  "runtimeImageDigest": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
   "platformArchitecture": "linux/arm64",
   "threadCount": 1,
   "deterministicConfig": "single-threaded-predictor",
